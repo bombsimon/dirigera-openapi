@@ -1,0 +1,5 @@
+plugins:
+  - ./plugins/operation-metadata.js
+
+decorators:
+  dirigera/operation-metadata: on

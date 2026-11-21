@@ -1,5 +1,7 @@
 # dirigera-openapi
 
+📖 **[Browse the docs](https://bombsimon.github.io/dirigera-openapi/)**
+
 An [OpenAPI] description of the local REST API on the IKEA DIRIGERA smart home
 hub, plus an [AsyncAPI] description of its websocket event stream. Use them to
 generate a client in any language, browse the API, or check your own
@@ -145,6 +147,16 @@ uvx openapi-spec-validator openapi.yaml
 npx @asyncapi/cli validate asyncapi.yaml
 ```
 
+## Browsing the docs
+
+Every push to `main` builds a static site with [Redocly] for both the REST API
+and the websocket, and publishes it to GitHub Pages. The events are under
+`/events/`. To build and serve it locally with [just] and Node:
+
+```sh
+just serve
+```
+
 ## Sources
 
 The spec combines the work of everyone who reverse engineered parts of this
@@ -225,3 +237,5 @@ update `x-verified` in the same change.
 [theeuwes-it/dirigera-simple]: https://github.com/theeuwes-it/dirigera-simple
 [zinen/node-red-contrib-dirigera]: https://github.com/zinen/node-red-contrib-dirigera
 [lpgera/dirigera-web]: https://github.com/lpgera/dirigera-web
+[Redocly]: https://redocly.com/docs/cli/commands/build-docs
+[just]: https://just.systems
