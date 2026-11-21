@@ -33,6 +33,22 @@ function describeOperationMetadata(operation, sourceRepositories) {
   return `<details>\n<summary>${summary}</summary>\n\n${sourcesTable}\n\n</details>`;
 }
 
+function prependToInfoDescription(markdown) {
+  return {
+    leave(info) {
+      info.description = info.description ? `${markdown}\n\n${info.description}` : markdown;
+    },
+  };
+}
+
+function restApiLinkDecorator() {
+  return {
+    Info: prependToInfoDescription(
+      '> 🔌 **REST API** (devices, rooms, scenes, pairing and more) is documented on the [REST API page](../).'
+    ),
+  };
+}
+
 function operationMetadataDecorator() {
   let sourceRepositories = {};
 
@@ -43,12 +59,9 @@ function operationMetadataDecorator() {
       },
     },
     // The websocket is rendered as a separate page from the AsyncAPI spec.
-    Info: {
-      leave(info) {
-        const eventsLink = '> 📡 **Websocket events** (ping, pong and change events) are documented on the [events page](events/).';
-        info.description = info.description ? `${eventsLink}\n\n${info.description}` : eventsLink;
-      },
-    },
+    Info: prependToInfoDescription(
+      '> 📡 **Websocket events** (ping, pong and change events) are documented on the [events page](events/).'
+    ),
     Operation: {
       leave(operation) {
         const metadata = describeOperationMetadata(operation, sourceRepositories);
@@ -66,6 +79,9 @@ module.exports = function operationMetadataPlugin() {
     decorators: {
       oas3: {
         'operation-metadata': operationMetadataDecorator,
+      },
+      async3: {
+        'rest-api-link': restApiLinkDecorator,
       },
     },
   };

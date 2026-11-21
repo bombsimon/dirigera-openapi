@@ -3,3 +3,4 @@ plugins:
 
 decorators:
   dirigera/operation-metadata: on
+  dirigera/rest-api-link: on
