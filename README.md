@@ -2,6 +2,8 @@
 
 📖 **[Browse the docs](https://bombsimon.github.io/dirigera-openapi/)**
 
+---
+
 An [OpenAPI] description of the local REST API on the IKEA DIRIGERA smart home
 hub, plus an [AsyncAPI] description of its websocket event stream. Use them to
 generate a client in any language, browse the API, or check your own
