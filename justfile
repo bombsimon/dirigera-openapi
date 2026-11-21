@@ -1,8 +1,17 @@
 redocly_version := "2.82.0"
+prettier_version := "3.10.1"
 site_directory := "site"
 
 default:
     @just --list
+
+# Format JavaScript, YAML and Markdown files
+fmt:
+    npx --yes prettier@{{ prettier_version }} --write .
+
+# Check formatting without changing any files
+fmt-check:
+    npx --yes prettier@{{ prettier_version }} --check .
 
 # Build the static documentation site for GitHub Pages
 docs: clean

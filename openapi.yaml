@@ -130,14 +130,14 @@ paths:
             type: string
             const: S256
       responses:
-        '200':
+        "200":
           description: Authorization code to exchange for a token.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthorizationCode'
+                $ref: "#/components/schemas/AuthorizationCode"
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
     post:
       tags:
         - Authentication
@@ -163,10 +163,10 @@ paths:
                 code_verifier:
                   type: string
       responses:
-        '2XX':
+        "2XX":
           description: Authorization cancelled.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /oauth/authorize/{transactionId}:
     get:
       tags:
@@ -185,7 +185,7 @@ paths:
           schema:
             type: string
       responses:
-        '2XX':
+        "2XX":
           description: Authorization status.
           content:
             application/json:
@@ -193,7 +193,7 @@ paths:
                 type: object
                 additionalProperties: true
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /oauth/token:
     post:
       tags:
@@ -222,16 +222,16 @@ paths:
         content:
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TokenRequest'
+              $ref: "#/components/schemas/TokenRequest"
       responses:
-        '2XX':
+        "2XX":
           description: Bearer token to use for every other request.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Token'
+                $ref: "#/components/schemas/Token"
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
 
   /home:
     get:
@@ -252,14 +252,14 @@ paths:
         - rtoma/dirigera-prometheus-exporter
         - zinen/node-dirigera-promise
       responses:
-        '200':
+        "200":
           description: The complete home.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Home'
+                $ref: "#/components/schemas/Home"
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
 
   /hub/status:
     get:
@@ -273,14 +273,14 @@ paths:
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
       responses:
-        '200':
+        "200":
           description: The hub as a device.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Hub'
+                $ref: "#/components/schemas/Hub"
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /hub/ota/check:
     put:
       tags:
@@ -293,10 +293,10 @@ paths:
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
       responses:
-        '2XX':
+        "2XX":
           description: Check started. Progress shows up in the hub's `ota*` attributes.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /hub/ota/update:
     put:
       tags:
@@ -309,10 +309,10 @@ paths:
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
       responses:
-        '2XX':
+        "2XX":
           description: Update started.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /hub/ota/environment:
     put:
       tags:
@@ -335,12 +335,12 @@ paths:
               properties:
                 environment:
                   type: string
-                  description: 'Known values: `prod`, `alpha`, `dev`.'
+                  description: "Known values: `prod`, `alpha`, `dev`."
       responses:
-        '2XX':
+        "2XX":
           description: Channel changed.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /hub/cloud-integration:
     put:
       tags:
@@ -363,10 +363,10 @@ paths:
                 isActive:
                   type: boolean
       responses:
-        '2XX':
+        "2XX":
           description: Setting changed.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
 
   /devices:
     get:
@@ -391,19 +391,19 @@ paths:
         - sanjoyg/dirigera_platform
         - bombsimon/dirigera-rs
       responses:
-        '200':
+        "200":
           description: All devices.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Device'
+                  $ref: "#/components/schemas/Device"
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /devices/{deviceId}:
     parameters:
-      - $ref: '#/components/parameters/DeviceId'
+      - $ref: "#/components/parameters/DeviceId"
     get:
       tags:
         - Devices
@@ -421,16 +421,16 @@ paths:
         - phillipp/dirigera
         - bombsimon/dirigera-rs
       responses:
-        '200':
+        "200":
           description: The device.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Device'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/Device"
+        "404":
+          $ref: "#/components/responses/NotFound"
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
     patch:
       tags:
         - Devices
@@ -460,7 +460,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DevicePatchList'
+              $ref: "#/components/schemas/DevicePatchList"
             examples:
               turnOn:
                 summary: Turn on
@@ -485,12 +485,12 @@ paths:
                   - attributes:
                       customName: Desk lamp
       responses:
-        '2XX':
+        "2XX":
           description: Change accepted. The new state arrives as a `deviceStateChanged` event.
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        "400":
+          $ref: "#/components/responses/BadRequest"
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
     delete:
       tags:
         - Devices
@@ -502,13 +502,13 @@ paths:
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
       responses:
-        '2XX':
+        "2XX":
           description: Device removed.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /devices/{deviceId}/identify:
     parameters:
-      - $ref: '#/components/parameters/DeviceId'
+      - $ref: "#/components/parameters/DeviceId"
     put:
       tags:
         - Devices
@@ -537,10 +537,10 @@ paths:
                   examples:
                     - 30
       responses:
-        '2XX':
+        "2XX":
           description: Identification started or stopped.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
 
   /devices/all:
     patch:
@@ -564,12 +564,12 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DevicePatchList'
+              $ref: "#/components/schemas/DevicePatchList"
       responses:
-        '2XX':
+        "2XX":
           description: Change accepted.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /devices/room/{roomId}:
     patch:
       tags:
@@ -583,19 +583,19 @@ paths:
         - thembo-sec/dirigera_client
         - hagronnestad/dirigera
       parameters:
-        - $ref: '#/components/parameters/RoomId'
-        - $ref: '#/components/parameters/DeviceTypeFilter'
+        - $ref: "#/components/parameters/RoomId"
+        - $ref: "#/components/parameters/DeviceTypeFilter"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DevicePatchList'
+              $ref: "#/components/schemas/DevicePatchList"
       responses:
-        '2XX':
+        "2XX":
           description: Change accepted.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /devices/set/{deviceSetId}:
     patch:
       tags:
@@ -610,19 +610,19 @@ paths:
         - openhab/openhab-addons
         - sanjoyg/dirigera_platform
       parameters:
-        - $ref: '#/components/parameters/DeviceSetId'
-        - $ref: '#/components/parameters/DeviceTypeFilter'
+        - $ref: "#/components/parameters/DeviceSetId"
+        - $ref: "#/components/parameters/DeviceTypeFilter"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DevicePatchList'
+              $ref: "#/components/schemas/DevicePatchList"
       responses:
-        '2XX':
+        "2XX":
           description: Change accepted.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /devices/audio_group/{audioGroupId}:
     patch:
       tags:
@@ -639,18 +639,18 @@ paths:
           description: The `audioGroup` attribute of a speaker.
           schema:
             type: string
-        - $ref: '#/components/parameters/DeviceTypeFilter'
+        - $ref: "#/components/parameters/DeviceTypeFilter"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DevicePatchList'
+              $ref: "#/components/schemas/DevicePatchList"
       responses:
-        '2XX':
+        "2XX":
           description: Change accepted.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /step/{targetId}:
     post:
       tags:
@@ -668,7 +668,7 @@ paths:
           description: Id of a device, room or device set.
           schema:
             type: string
-        - $ref: '#/components/parameters/DeviceTypeFilter'
+        - $ref: "#/components/parameters/DeviceTypeFilter"
       requestBody:
         required: true
         content:
@@ -681,7 +681,7 @@ paths:
               properties:
                 type:
                   type: string
-                  description: 'Known values: `lightLevel`.'
+                  description: "Known values: `lightLevel`."
                 stepSize:
                   type: integer
                   description: Percentage points to step, negative to step down.
@@ -689,10 +689,10 @@ paths:
                   type: integer
                   description: Transition time in milliseconds.
       responses:
-        '2XX':
+        "2XX":
           description: Step accepted.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
 
   /rooms:
     get:
@@ -708,16 +708,16 @@ paths:
         - openhab/openhab-addons
         - salex-org/ikea-dirigera-client
       responses:
-        '200':
+        "200":
           description: All rooms.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Room'
+                  $ref: "#/components/schemas/Room"
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
     post:
       tags:
         - Rooms
@@ -733,19 +733,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RoomInput'
+              $ref: "#/components/schemas/RoomInput"
       responses:
-        '2XX':
+        "2XX":
           description: Room created.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Identifier'
+                $ref: "#/components/schemas/Identifier"
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /rooms/{roomId}:
     parameters:
-      - $ref: '#/components/parameters/RoomId'
+      - $ref: "#/components/parameters/RoomId"
     get:
       tags:
         - Rooms
@@ -756,16 +756,16 @@ paths:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
       responses:
-        '200':
+        "200":
           description: The room.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Room'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/Room"
+        "404":
+          $ref: "#/components/responses/NotFound"
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
     put:
       tags:
         - Rooms
@@ -782,12 +782,12 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RoomInput'
+              $ref: "#/components/schemas/RoomInput"
       responses:
-        '2XX':
+        "2XX":
           description: Room updated.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
     delete:
       tags:
         - Rooms
@@ -799,13 +799,13 @@ paths:
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
       responses:
-        '2XX':
+        "2XX":
           description: Room deleted. Its devices end up without a room.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /rooms/{roomId}/devices:
     parameters:
-      - $ref: '#/components/parameters/RoomId'
+      - $ref: "#/components/parameters/RoomId"
     patch:
       tags:
         - Rooms
@@ -829,10 +829,10 @@ paths:
                   items:
                     type: string
       responses:
-        '2XX':
+        "2XX":
           description: Devices moved.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
 
   /device-set:
     post:
@@ -851,19 +851,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DeviceSetInput'
+              $ref: "#/components/schemas/DeviceSetInput"
       responses:
-        '2XX':
+        "2XX":
           description: Device set created.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Identifier'
+                $ref: "#/components/schemas/Identifier"
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /device-set/{deviceSetId}:
     parameters:
-      - $ref: '#/components/parameters/DeviceSetId'
+      - $ref: "#/components/parameters/DeviceSetId"
     put:
       tags:
         - Device sets
@@ -879,12 +879,12 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DeviceSetInput'
+              $ref: "#/components/schemas/DeviceSetInput"
       responses:
-        '2XX':
+        "2XX":
           description: Device set updated.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
     delete:
       tags:
         - Device sets
@@ -896,13 +896,13 @@ paths:
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
       responses:
-        '2XX':
+        "2XX":
           description: Device set deleted.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /device-set/{deviceSetId}/configuration:
     parameters:
-      - $ref: '#/components/parameters/DeviceSetId'
+      - $ref: "#/components/parameters/DeviceSetId"
     patch:
       tags:
         - Device sets
@@ -932,10 +932,10 @@ paths:
                   items:
                     type: string
       responses:
-        '2XX':
+        "2XX":
           description: Configuration updated.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
 
   /scenes:
     get:
@@ -954,16 +954,16 @@ paths:
         - sanjoyg/dirigera_platform
         - bombsimon/dirigera-rs
       responses:
-        '200':
+        "200":
           description: All scenes and automations.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Scene'
+                  $ref: "#/components/schemas/Scene"
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
     post:
       tags:
         - Scenes
@@ -981,7 +981,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SceneInput'
+              $ref: "#/components/schemas/SceneInput"
             examples:
               buttonPress:
                 summary: Run on a shortcut button press
@@ -1005,17 +1005,17 @@ paths:
                         lightLevel: 20
                   commands: []
       responses:
-        '2XX':
+        "2XX":
           description: Scene created.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Identifier'
+                $ref: "#/components/schemas/Identifier"
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /scenes/{sceneId}:
     parameters:
-      - $ref: '#/components/parameters/SceneId'
+      - $ref: "#/components/parameters/SceneId"
     get:
       tags:
         - Scenes
@@ -1031,16 +1031,16 @@ paths:
         - sanjoyg/dirigera_platform
         - bombsimon/dirigera-rs
       responses:
-        '200':
+        "200":
           description: The scene.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Scene'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/Scene"
+        "404":
+          $ref: "#/components/responses/NotFound"
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
     put:
       tags:
         - Scenes
@@ -1055,12 +1055,12 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SceneInput'
+              $ref: "#/components/schemas/SceneInput"
       responses:
-        '2XX':
+        "2XX":
           description: Scene updated.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
     delete:
       tags:
         - Scenes
@@ -1074,13 +1074,13 @@ paths:
         - thembo-sec/dirigera_client
         - openhab/openhab-addons
       responses:
-        '2XX':
+        "2XX":
           description: Scene deleted.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /scenes/{sceneId}/trigger:
     parameters:
-      - $ref: '#/components/parameters/SceneId'
+      - $ref: "#/components/parameters/SceneId"
     post:
       tags:
         - Scenes
@@ -1096,13 +1096,13 @@ paths:
         - sanjoyg/dirigera_platform
         - bombsimon/dirigera-rs
       responses:
-        '2XX':
+        "2XX":
           description: Scene triggered.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /scenes/{sceneId}/undo:
     parameters:
-      - $ref: '#/components/parameters/SceneId'
+      - $ref: "#/components/parameters/SceneId"
     post:
       tags:
         - Scenes
@@ -1117,10 +1117,10 @@ paths:
         - sanjoyg/dirigera_platform
         - bombsimon/dirigera-rs
       responses:
-        '2XX':
+        "2XX":
           description: Scene undone.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
 
   /remoteLinks/{remoteLinkId}/targets:
     put:
@@ -1154,10 +1154,10 @@ paths:
                   items:
                     type: string
       responses:
-        '2XX':
+        "2XX":
           description: Targets updated.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
 
   /users:
     get:
@@ -1174,16 +1174,16 @@ paths:
         - openhab/openhab-addons
         - salex-org/ikea-dirigera-client
       responses:
-        '200':
+        "200":
           description: All users.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/User'
+                  $ref: "#/components/schemas/User"
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /users/me:
     get:
       tags:
@@ -1197,14 +1197,14 @@ paths:
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
       responses:
-        '200':
+        "200":
           description: The current user.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: "#/components/schemas/User"
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
     patch:
       tags:
         - Users
@@ -1226,10 +1226,10 @@ paths:
                 name:
                   type: string
       responses:
-        '2XX':
+        "2XX":
           description: User renamed.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
   /users/{userId}:
     delete:
       tags:
@@ -1250,10 +1250,10 @@ paths:
           schema:
             type: string
       responses:
-        '2XX':
+        "2XX":
           description: User removed.
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
 
   /music:
     get:
@@ -1268,14 +1268,14 @@ paths:
         - thembo-sec/dirigera_client
         - openhab/openhab-addons
       responses:
-        '200':
+        "200":
           description: Music library.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Music'
+                $ref: "#/components/schemas/Music"
         default:
-          $ref: '#/components/responses/Error'
+          $ref: "#/components/responses/Error"
 
 components:
   securitySchemes:
@@ -1330,19 +1330,19 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
     NotFound:
       description: No such resource.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
     BadRequest:
       description: The request body or an id was invalid.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
 
   schemas:
     Error:
@@ -1358,7 +1358,7 @@ components:
         message:
           type: string
           examples:
-            - 'invalid device id: all'
+            - "invalid device id: all"
 
     Identifier:
       type: object
@@ -1384,7 +1384,7 @@ components:
       properties:
         grant_type:
           type: string
-          description: '`authorization_code` when pairing, `refresh_token` to refresh.'
+          description: "`authorization_code` when pairing, `refresh_token` to refresh."
           enum:
             - authorization_code
             - refresh_token
@@ -1417,35 +1417,35 @@ components:
         - scenes
       properties:
         user:
-          $ref: '#/components/schemas/User'
+          $ref: "#/components/schemas/User"
         hub:
-          $ref: '#/components/schemas/Hub'
+          $ref: "#/components/schemas/Hub"
         devices:
           type: array
           items:
-            $ref: '#/components/schemas/Device'
+            $ref: "#/components/schemas/Device"
         users:
           type: array
           items:
-            $ref: '#/components/schemas/User'
+            $ref: "#/components/schemas/User"
         scenes:
           type: array
           items:
-            $ref: '#/components/schemas/Scene'
+            $ref: "#/components/schemas/Scene"
         rooms:
           type: array
           items:
-            $ref: '#/components/schemas/Room'
+            $ref: "#/components/schemas/Room"
         deviceSets:
           type: array
           items:
-            $ref: '#/components/schemas/DeviceSet'
+            $ref: "#/components/schemas/DeviceSet"
         music:
-          $ref: '#/components/schemas/Music'
+          $ref: "#/components/schemas/Music"
         adaptiveProfiles:
           type: array
           items:
-            $ref: '#/components/schemas/AdaptiveProfile'
+            $ref: "#/components/schemas/AdaptiveProfile"
 
     Device:
       type: object
@@ -1497,15 +1497,15 @@ components:
           type: string
           format: date-time
         attributes:
-          $ref: '#/components/schemas/DeviceAttributes'
+          $ref: "#/components/schemas/DeviceAttributes"
         capabilities:
-          $ref: '#/components/schemas/Capabilities'
+          $ref: "#/components/schemas/Capabilities"
         room:
-          $ref: '#/components/schemas/Room'
+          $ref: "#/components/schemas/Room"
         deviceSet:
           type: array
           items:
-            $ref: '#/components/schemas/DeviceSet'
+            $ref: "#/components/schemas/DeviceSet"
         remoteLinks:
           type: array
           description: Ids of remotes that control this device.
@@ -1526,17 +1526,17 @@ components:
         dynamicFeatures:
           type: array
           items:
-            $ref: '#/components/schemas/DynamicFeature'
+            $ref: "#/components/schemas/DynamicFeature"
 
     Hub:
       description: The hub, as returned by `GET /hub/status` and in `GET /home`.
       allOf:
-        - $ref: '#/components/schemas/Device'
+        - $ref: "#/components/schemas/Device"
         - type: object
           properties:
             environment:
               type: string
-              description: 'Firmware channel. Known values: `prod`, `alpha`, `dev`.'
+              description: "Firmware channel. Known values: `prod`, `alpha`, `dev`."
             apiVersion:
               type: string
 
@@ -1630,7 +1630,7 @@ components:
           type: boolean
         otaStatus:
           type: string
-          description: 'Known values: `upToDate`, `updateAvailable`.'
+          description: "Known values: `upToDate`, `updateAvailable`."
         otaState:
           type: string
           description: |
@@ -1643,7 +1643,7 @@ components:
           maximum: 100
         otaPolicy:
           type: string
-          description: 'Known values: `autoUpdate`, `autoDownload`.'
+          description: "Known values: `autoUpdate`, `autoDownload`."
         otaScheduleStart:
           type: string
           description: Time of day as `HH:MM`.
@@ -1665,12 +1665,12 @@ components:
           description: Brightness in percent. Turn a light off with `isOn` instead of `0`.
         startupOnOff:
           type: string
-          description: 'State after a power outage. Known values: `startOn`, `startOff`, `startPrevious`, `startToggle`.'
+          description: "State after a power outage. Known values: `startOn`, `startOff`, `startPrevious`, `startToggle`."
         startUpCurrentLevel:
           type: integer
         colorMode:
           type: string
-          description: 'Whether the light shows a white temperature or a color. Known values: `temperature`, `color`.'
+          description: "Whether the light shows a white temperature or a color. Known values: `temperature`, `color`."
         colorTemperature:
           type: integer
           description: Color temperature in Kelvin.
@@ -1698,7 +1698,7 @@ components:
           minimum: 0
           maximum: 1
         deviceOnBehavior:
-          $ref: '#/components/schemas/DeviceOnBehavior'
+          $ref: "#/components/schemas/DeviceOnBehavior"
 
         currentActivePower:
           type: number
@@ -1737,11 +1737,11 @@ components:
           maximum: 100
         blindsState:
           type: string
-          description: 'Known values: `stopped`, `up`, `down`, and an empty string on remotes.'
+          description: "Known values: `stopped`, `up`, `down`, and an empty string on remotes."
 
         controlMode:
           type: string
-          description: 'Generic switches. Known values: `light`, `speaker`, `blind`, `shortcut`.'
+          description: "Generic switches. Known values: `light`, `speaker`, `blind`, `shortcut`."
         switchGroup:
           type: integer
         switchLabel:
@@ -1750,7 +1750,7 @@ components:
           type: array
           description: Remotes and motion sensors. Daily schedule of light level and temperature.
           items:
-            $ref: '#/components/schemas/AdaptiveScheduleEntry'
+            $ref: "#/components/schemas/AdaptiveScheduleEntry"
 
         isDetected:
           type: boolean
@@ -1758,7 +1758,7 @@ components:
         motionDetectedDelay:
           type: integer
         sensorConfig:
-          $ref: '#/components/schemas/SensorConfig'
+          $ref: "#/components/schemas/SensorConfig"
         isOpen:
           type: boolean
           description: Door and window sensors.
@@ -1797,7 +1797,7 @@ components:
 
         fanMode:
           type: string
-          description: 'Air purifiers. Known values: `auto`, `low`, `medium`, `high`, `on`, `off`.'
+          description: "Air purifiers. Known values: `auto`, `low`, `medium`, `high`, `on`, `off`."
         fanModeSequence:
           type: string
         motorState:
@@ -1825,7 +1825,7 @@ components:
           type: string
           format: date-time
         playbackAudio:
-          $ref: '#/components/schemas/PlaybackAudio'
+          $ref: "#/components/schemas/PlaybackAudio"
         playbackPosition:
           type: object
           properties:
@@ -1877,10 +1877,10 @@ components:
             properties:
               name:
                 type: string
-                description: 'Known values: `analytics`, `diagnostics`.'
+                description: "Known values: `analytics`, `diagnostics`."
               value:
                 type: string
-                description: 'Known values: `enabled`, `disabled`.'
+                description: "Known values: `enabled`, `disabled`."
         logLevel:
           type: integer
         coredump:
@@ -1892,7 +1892,7 @@ components:
         countryCode:
           type: string
         coordinates:
-          $ref: '#/components/schemas/Coordinates'
+          $ref: "#/components/schemas/Coordinates"
         nextSunRise:
           type: string
           format: date-time
@@ -1903,14 +1903,14 @@ components:
           type: string
         homestate:
           type: string
-          description: 'Known values: `home`, `away`.'
+          description: "Known values: `home`, `away`."
 
     DevicePatchList:
       type: array
       description: Every known client sends exactly one element.
       minItems: 1
       items:
-        $ref: '#/components/schemas/DevicePatch'
+        $ref: "#/components/schemas/DevicePatch"
 
     DevicePatch:
       type: object
@@ -1918,7 +1918,7 @@ components:
         - attributes
       properties:
         attributes:
-          $ref: '#/components/schemas/DeviceAttributesPatch'
+          $ref: "#/components/schemas/DeviceAttributesPatch"
         transitionTime:
           type: integer
           description: Fade duration in milliseconds, for light level, temperature and color.
@@ -1949,18 +1949,18 @@ components:
           maximum: 1
         startupOnOff:
           type: string
-          description: 'Known values: `startOn`, `startOff`, `startPrevious`, `startToggle`.'
+          description: "Known values: `startOn`, `startOff`, `startPrevious`, `startToggle`."
         startupTemperature:
           type: integer
         deviceOnBehavior:
-          $ref: '#/components/schemas/DeviceOnBehavior'
+          $ref: "#/components/schemas/DeviceOnBehavior"
         blindsTargetLevel:
           type: integer
           minimum: 0
           maximum: 100
         blindsState:
           type: string
-          description: 'Known values: `stopped`, `up`, `down`.'
+          description: "Known values: `stopped`, `up`, `down`."
         childLock:
           type: boolean
         statusLight:
@@ -1981,13 +1981,13 @@ components:
         controlMode:
           type: string
         sensorConfig:
-          $ref: '#/components/schemas/SensorConfig'
+          $ref: "#/components/schemas/SensorConfig"
         circadianPresets:
           type: array
           items:
-            $ref: '#/components/schemas/AdaptiveScheduleEntry'
+            $ref: "#/components/schemas/AdaptiveScheduleEntry"
         coordinates:
-          $ref: '#/components/schemas/Coordinates'
+          $ref: "#/components/schemas/Coordinates"
         timezone:
           type: string
         countryCode:
@@ -2012,7 +2012,7 @@ components:
       properties:
         behavior:
           type: string
-          description: 'Known values: `lastValue`, `adaptiveProfile`.'
+          description: "Known values: `lastValue`, `adaptiveProfile`."
         profileId:
           type: string
           description: Adaptive profile id, empty unless `behavior` is `adaptiveProfile`.
@@ -2023,7 +2023,7 @@ components:
       properties:
         scheduleOn:
           type: boolean
-          description: '`false` reacts all day, `true` only within `schedule`.'
+          description: "`false` reacts all day, `true` only within `schedule`."
         onDuration:
           type: integer
           description: Seconds the lights stay on after the last motion.
@@ -2031,9 +2031,9 @@ components:
           type: object
           properties:
             onCondition:
-              $ref: '#/components/schemas/ScheduleCondition'
+              $ref: "#/components/schemas/ScheduleCondition"
             offCondition:
-              $ref: '#/components/schemas/ScheduleCondition'
+              $ref: "#/components/schemas/ScheduleCondition"
 
     ScheduleCondition:
       type: object
@@ -2042,7 +2042,7 @@ components:
       properties:
         time:
           type: string
-          description: '`HH:MM`, `sunrise` or `sunset`.'
+          description: "`HH:MM`, `sunrise` or `sunset`."
         offset:
           type: integer
           description: Minutes relative to sunrise or sunset.
@@ -2072,7 +2072,7 @@ components:
         adaptiveSchedule:
           type: array
           items:
-            $ref: '#/components/schemas/AdaptiveScheduleEntry'
+            $ref: "#/components/schemas/AdaptiveScheduleEntry"
 
     AdaptiveScheduleEntry:
       type: object
@@ -2081,7 +2081,7 @@ components:
       properties:
         startTime:
           type: string
-          description: '`HH:MM`.'
+          description: "`HH:MM`."
         lightLevel:
           type: integer
         colorTemperature:
@@ -2095,11 +2095,11 @@ components:
         providerType:
           type: string
         playItem:
-          $ref: '#/components/schemas/MusicPlayItem'
+          $ref: "#/components/schemas/MusicPlayItem"
         nextPlayItem:
-          $ref: '#/components/schemas/MusicPlayItem'
+          $ref: "#/components/schemas/MusicPlayItem"
         playlist:
-          $ref: '#/components/schemas/Playlist'
+          $ref: "#/components/schemas/Playlist"
 
     Room:
       type: object
@@ -2117,9 +2117,9 @@ components:
           examples:
             - Living room
         color:
-          $ref: '#/components/schemas/RoomColor'
+          $ref: "#/components/schemas/RoomColor"
         icon:
-          $ref: '#/components/schemas/RoomIcon'
+          $ref: "#/components/schemas/RoomIcon"
 
     RoomInput:
       type: object
@@ -2131,9 +2131,9 @@ components:
         name:
           type: string
         color:
-          $ref: '#/components/schemas/RoomColor'
+          $ref: "#/components/schemas/RoomColor"
         icon:
-          $ref: '#/components/schemas/RoomIcon'
+          $ref: "#/components/schemas/RoomIcon"
 
     RoomColor:
       type: string
@@ -2173,7 +2173,7 @@ components:
         name:
           type: string
         icon:
-          $ref: '#/components/schemas/DeviceSetIcon'
+          $ref: "#/components/schemas/DeviceSetIcon"
 
     DeviceSetInput:
       type: object
@@ -2184,7 +2184,7 @@ components:
         name:
           type: string
         icon:
-          $ref: '#/components/schemas/DeviceSetIcon'
+          $ref: "#/components/schemas/DeviceSetIcon"
 
     DeviceSetIcon:
       type: string
@@ -2208,21 +2208,21 @@ components:
           type: string
           format: uuid
         info:
-          $ref: '#/components/schemas/SceneInfo'
+          $ref: "#/components/schemas/SceneInfo"
         type:
-          $ref: '#/components/schemas/SceneType'
+          $ref: "#/components/schemas/SceneType"
         triggers:
           type: array
           items:
-            $ref: '#/components/schemas/SceneTrigger'
+            $ref: "#/components/schemas/SceneTrigger"
         actions:
           type: array
           items:
-            $ref: '#/components/schemas/SceneAction'
+            $ref: "#/components/schemas/SceneAction"
         commands:
           type: array
           items:
-            $ref: '#/components/schemas/SceneCommand'
+            $ref: "#/components/schemas/SceneCommand"
         createdAt:
           type: string
           format: date-time
@@ -2247,21 +2247,21 @@ components:
         - actions
       properties:
         info:
-          $ref: '#/components/schemas/SceneInfo'
+          $ref: "#/components/schemas/SceneInfo"
         type:
-          $ref: '#/components/schemas/SceneType'
+          $ref: "#/components/schemas/SceneType"
         triggers:
           type: array
           items:
-            $ref: '#/components/schemas/SceneTrigger'
+            $ref: "#/components/schemas/SceneTrigger"
         actions:
           type: array
           items:
-            $ref: '#/components/schemas/SceneAction'
+            $ref: "#/components/schemas/SceneAction"
         commands:
           type: array
           items:
-            $ref: '#/components/schemas/SceneCommand'
+            $ref: "#/components/schemas/SceneCommand"
 
     SceneType:
       type: string
@@ -2300,7 +2300,7 @@ components:
           type: string
         type:
           type: string
-          description: 'Known values: `app`, `time`, `sunriseSunset`, `controller`, `event`, `motionSensor`, `duration`.'
+          description: "Known values: `app`, `time`, `sunriseSunset`, `controller`, `event`, `motionSensor`, `duration`."
         disabled:
           type: boolean
         triggeredAt:
@@ -2309,14 +2309,14 @@ components:
         nextTriggerAt:
           type:
             - string
-            - 'null'
+            - "null"
           format: date-time
         trigger:
-          $ref: '#/components/schemas/SceneTriggerCondition'
+          $ref: "#/components/schemas/SceneTriggerCondition"
         endTrigger:
-          $ref: '#/components/schemas/SceneEndTrigger'
+          $ref: "#/components/schemas/SceneEndTrigger"
         endTriggerEvent:
-          $ref: '#/components/schemas/SceneEndTrigger'
+          $ref: "#/components/schemas/SceneEndTrigger"
 
     SceneTriggerCondition:
       type: object
@@ -2329,10 +2329,10 @@ components:
             type: string
         time:
           type: string
-          description: '`HH:MM` in the hub timezone.'
+          description: "`HH:MM` in the hub timezone."
         type:
           type: string
-          description: '`sunrise` or `sunset`.'
+          description: "`sunrise` or `sunset`."
         offset:
           type: integer
           description: Minutes relative to sunrise or sunset.
@@ -2342,7 +2342,7 @@ components:
             - shortcutController
         clickPattern:
           type: string
-          description: 'Known values: `singlePress`, `doublePress`, `longPress`.'
+          description: "Known values: `singlePress`, `doublePress`, `longPress`."
         buttonIndex:
           type: integer
         deviceId:
@@ -2364,7 +2364,7 @@ components:
             properties:
               type:
                 type: string
-                description: 'Phone notification to send. Known values: `opened`, `closed`, `waterleak`.'
+                description: "Phone notification to send. Known values: `opened`, `closed`, `waterleak`."
 
     SceneEndTrigger:
       type: object
@@ -2374,7 +2374,7 @@ components:
       properties:
         type:
           type: string
-          description: 'Known values: `duration`, `time`, `sunriseSunset`.'
+          description: "Known values: `duration`, `time`, `sunriseSunset`."
         trigger:
           type: object
           properties:
@@ -2385,13 +2385,13 @@ components:
               type: string
             type:
               type: string
-              description: '`sunrise` or `sunset`.'
+              description: "`sunrise` or `sunset`."
             offset:
               type: integer
         nextTriggerAt:
           type:
             - string
-            - 'null'
+            - "null"
           format: date-time
 
     SceneAction:
@@ -2404,13 +2404,13 @@ components:
           type: string
         type:
           type: string
-          description: 'Known values: `device`, `deviceSet`.'
+          description: "Known values: `device`, `deviceSet`."
         enabled:
           type: boolean
         deviceId:
           type: string
         attributes:
-          $ref: '#/components/schemas/DeviceAttributesPatch'
+          $ref: "#/components/schemas/DeviceAttributesPatch"
 
     SceneCommand:
       type: object
@@ -2424,7 +2424,7 @@ components:
           description: Target device id.
         type:
           type: string
-          description: 'Known values: `device`.'
+          description: "Known values: `device`."
         enabled:
           type: boolean
         commands:
@@ -2439,17 +2439,17 @@ components:
             properties:
               type:
                 type: string
-                description: 'Known values: `transitionLight`, `playAudioClipByName`.'
+                description: "Known values: `transitionLight`, `playAudioClipByName`."
               duration:
                 type: integer
               startState:
-                $ref: '#/components/schemas/LightState'
+                $ref: "#/components/schemas/LightState"
               endState:
-                $ref: '#/components/schemas/LightState'
+                $ref: "#/components/schemas/LightState"
               playAudioClipName:
                 type: string
                 examples:
-                  - 'ikea://notify/03_device_open'
+                  - "ikea://notify/03_device_open"
               volume:
                 type: integer
 
@@ -2487,7 +2487,7 @@ components:
           type: string
         role:
           type: string
-          description: 'Known values: `host`, `home_member`.'
+          description: "Known values: `host`, `home_member`."
         remoteUser:
           type: integer
 
@@ -2501,7 +2501,7 @@ components:
         playlists:
           type: array
           items:
-            $ref: '#/components/schemas/Playlist'
+            $ref: "#/components/schemas/Playlist"
         favorites:
           type: array
           items:
@@ -2529,7 +2529,7 @@ components:
         playItems:
           type: array
           items:
-            $ref: '#/components/schemas/MusicPlayItem'
+            $ref: "#/components/schemas/MusicPlayItem"
 
     MusicPlayItem:
       type: object

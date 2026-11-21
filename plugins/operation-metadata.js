@@ -2,27 +2,31 @@
 // https://redocly.com/docs/cli/custom-plugins/custom-decorators
 function describeVerification(isVerified) {
   if (isVerified) {
-    return '✅ <strong>Verified</strong> against a real hub';
+    return "✅ <strong>Verified</strong> against a real hub";
   }
 
-  return '⚠️ <strong>Unverified</strong>, described from community sources only';
+  return "⚠️ <strong>Unverified</strong>, described from community sources only";
 }
 
 function describeSources(sourceSlugs, sourceRepositories) {
   const sourceRows = sourceSlugs.map((slug) => {
     const repositoryUrl = sourceRepositories[slug];
-    const sourceLink = repositoryUrl ? `[${slug}](${repositoryUrl})` : `\`${slug}\``;
+    const sourceLink = repositoryUrl
+      ? `[${slug}](${repositoryUrl})`
+      : `\`${slug}\``;
 
     return `| ${sourceLink} |`;
   });
 
-  return ['| Sources |', '| --- |', ...sourceRows].join('\n');
+  return ["| Sources |", "| --- |", ...sourceRows].join("\n");
 }
 
 // A collapsed <details> keeps the status on one line with sources a click away.
 function describeOperationMetadata(operation, sourceRepositories) {
-  const summary = describeVerification(operation['x-verified'] === true);
-  const sourceSlugs = Array.isArray(operation['x-sources']) ? operation['x-sources'] : [];
+  const summary = describeVerification(operation["x-verified"] === true);
+  const sourceSlugs = Array.isArray(operation["x-sources"])
+    ? operation["x-sources"]
+    : [];
 
   if (sourceSlugs.length === 0) {
     return summary;
@@ -36,7 +40,9 @@ function describeOperationMetadata(operation, sourceRepositories) {
 function prependToInfoDescription(markdown) {
   return {
     leave(info) {
-      info.description = info.description ? `${markdown}\n\n${info.description}` : markdown;
+      info.description = info.description
+        ? `${markdown}\n\n${info.description}`
+        : markdown;
     },
   };
 }
@@ -44,7 +50,7 @@ function prependToInfoDescription(markdown) {
 function restApiLinkDecorator() {
   return {
     Info: prependToInfoDescription(
-      '> 🔌 **REST API** (devices, rooms, scenes, pairing and more) is documented on the [REST API page](../).'
+      "> 🔌 **REST API** (devices, rooms, scenes, pairing and more) is documented on the [REST API page](../).",
     ),
   };
 }
@@ -55,16 +61,19 @@ function operationMetadataDecorator() {
   return {
     Root: {
       enter(root) {
-        sourceRepositories = root['x-source-repositories'] ?? {};
+        sourceRepositories = root["x-source-repositories"] ?? {};
       },
     },
     // The websocket is rendered as a separate page from the AsyncAPI spec.
     Info: prependToInfoDescription(
-      '> 📡 **Websocket events** (ping, pong and change events) are documented on the [events page](events/).'
+      "> 📡 **Websocket events** (ping, pong and change events) are documented on the [events page](events/).",
     ),
     Operation: {
       leave(operation) {
-        const metadata = describeOperationMetadata(operation, sourceRepositories);
+        const metadata = describeOperationMetadata(
+          operation,
+          sourceRepositories,
+        );
         operation.description = operation.description
           ? `${metadata}\n\n${operation.description}`
           : metadata;
@@ -75,13 +84,13 @@ function operationMetadataDecorator() {
 
 module.exports = function operationMetadataPlugin() {
   return {
-    id: 'dirigera',
+    id: "dirigera",
     decorators: {
       oas3: {
-        'operation-metadata': operationMetadataDecorator,
+        "operation-metadata": operationMetadataDecorator,
       },
       async3: {
-        'rest-api-link': restApiLinkDecorator,
+        "rest-api-link": restApiLinkDecorator,
       },
     },
   };

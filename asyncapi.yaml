@@ -23,7 +23,7 @@ defaultContentType: application/json
 
 servers:
   hub:
-    host: '{host}:8443'
+    host: "{host}:8443"
     pathname: /v1
     protocol: wss
     description: |
@@ -32,7 +32,7 @@ servers:
       host:
         default: 192.168.1.100
     security:
-      - $ref: '#/components/securitySchemes/bearerAuth'
+      - $ref: "#/components/securitySchemes/bearerAuth"
 
 channels:
   events:
@@ -40,87 +40,87 @@ channels:
     description: Single channel carrying every event in both directions.
     messages:
       ping:
-        $ref: '#/components/messages/ping'
+        $ref: "#/components/messages/ping"
       pong:
-        $ref: '#/components/messages/pong'
+        $ref: "#/components/messages/pong"
       deviceStateChanged:
-        $ref: '#/components/messages/deviceStateChanged'
+        $ref: "#/components/messages/deviceStateChanged"
       deviceConfigurationChanged:
-        $ref: '#/components/messages/deviceConfigurationChanged'
+        $ref: "#/components/messages/deviceConfigurationChanged"
       deviceAdded:
-        $ref: '#/components/messages/deviceAdded'
+        $ref: "#/components/messages/deviceAdded"
       deviceRemoved:
-        $ref: '#/components/messages/deviceRemoved'
+        $ref: "#/components/messages/deviceRemoved"
       deviceDiscovered:
-        $ref: '#/components/messages/deviceDiscovered'
+        $ref: "#/components/messages/deviceDiscovered"
       remotePressEvent:
-        $ref: '#/components/messages/remotePressEvent'
+        $ref: "#/components/messages/remotePressEvent"
       sceneCreated:
-        $ref: '#/components/messages/sceneCreated'
+        $ref: "#/components/messages/sceneCreated"
       sceneUpdated:
-        $ref: '#/components/messages/sceneUpdated'
+        $ref: "#/components/messages/sceneUpdated"
       sceneDeleted:
-        $ref: '#/components/messages/sceneDeleted'
+        $ref: "#/components/messages/sceneDeleted"
       sceneTriggered:
-        $ref: '#/components/messages/sceneTriggered'
+        $ref: "#/components/messages/sceneTriggered"
       sceneCompleted:
-        $ref: '#/components/messages/sceneCompleted'
+        $ref: "#/components/messages/sceneCompleted"
       roomCreated:
-        $ref: '#/components/messages/roomCreated'
+        $ref: "#/components/messages/roomCreated"
       roomUpdated:
-        $ref: '#/components/messages/roomUpdated'
+        $ref: "#/components/messages/roomUpdated"
       roomDeleted:
-        $ref: '#/components/messages/roomDeleted'
+        $ref: "#/components/messages/roomDeleted"
       deviceSetCreated:
-        $ref: '#/components/messages/deviceSetCreated'
+        $ref: "#/components/messages/deviceSetCreated"
       deviceSetUpdated:
-        $ref: '#/components/messages/deviceSetUpdated'
+        $ref: "#/components/messages/deviceSetUpdated"
       deviceSetDeleted:
-        $ref: '#/components/messages/deviceSetDeleted'
+        $ref: "#/components/messages/deviceSetDeleted"
       musicUpdated:
-        $ref: '#/components/messages/musicUpdated'
+        $ref: "#/components/messages/musicUpdated"
       termination:
-        $ref: '#/components/messages/termination'
+        $ref: "#/components/messages/termination"
 
 operations:
   sendPing:
     action: send
     channel:
-      $ref: '#/channels/events'
+      $ref: "#/channels/events"
     summary: Keep the connection alive.
     description: Community clients send a ping every 30 seconds. The hub answers with a pong.
     messages:
-      - $ref: '#/channels/events/messages/ping'
+      - $ref: "#/channels/events/messages/ping"
     reply:
       channel:
-        $ref: '#/channels/events'
+        $ref: "#/channels/events"
       messages:
-        - $ref: '#/channels/events/messages/pong'
+        - $ref: "#/channels/events/messages/pong"
   receiveEvents:
     action: receive
     channel:
-      $ref: '#/channels/events'
+      $ref: "#/channels/events"
     summary: Changes to devices, scenes, rooms, device sets and music.
     messages:
-      - $ref: '#/channels/events/messages/deviceStateChanged'
-      - $ref: '#/channels/events/messages/deviceConfigurationChanged'
-      - $ref: '#/channels/events/messages/deviceAdded'
-      - $ref: '#/channels/events/messages/deviceRemoved'
-      - $ref: '#/channels/events/messages/deviceDiscovered'
-      - $ref: '#/channels/events/messages/remotePressEvent'
-      - $ref: '#/channels/events/messages/sceneCreated'
-      - $ref: '#/channels/events/messages/sceneUpdated'
-      - $ref: '#/channels/events/messages/sceneDeleted'
-      - $ref: '#/channels/events/messages/sceneTriggered'
-      - $ref: '#/channels/events/messages/sceneCompleted'
-      - $ref: '#/channels/events/messages/roomCreated'
-      - $ref: '#/channels/events/messages/roomUpdated'
-      - $ref: '#/channels/events/messages/roomDeleted'
-      - $ref: '#/channels/events/messages/deviceSetCreated'
-      - $ref: '#/channels/events/messages/deviceSetUpdated'
-      - $ref: '#/channels/events/messages/deviceSetDeleted'
-      - $ref: '#/channels/events/messages/musicUpdated'
-      - $ref: '#/channels/events/messages/termination'
+      - $ref: "#/channels/events/messages/deviceStateChanged"
+      - $ref: "#/channels/events/messages/deviceConfigurationChanged"
+      - $ref: "#/channels/events/messages/deviceAdded"
+      - $ref: "#/channels/events/messages/deviceRemoved"
+      - $ref: "#/channels/events/messages/deviceDiscovered"
+      - $ref: "#/channels/events/messages/remotePressEvent"
+      - $ref: "#/channels/events/messages/sceneCreated"
+      - $ref: "#/channels/events/messages/sceneUpdated"
+      - $ref: "#/channels/events/messages/sceneDeleted"
+      - $ref: "#/channels/events/messages/sceneTriggered"
+      - $ref: "#/channels/events/messages/sceneCompleted"
+      - $ref: "#/channels/events/messages/roomCreated"
+      - $ref: "#/channels/events/messages/roomUpdated"
+      - $ref: "#/channels/events/messages/roomDeleted"
+      - $ref: "#/channels/events/messages/deviceSetCreated"
+      - $ref: "#/channels/events/messages/deviceSetUpdated"
+      - $ref: "#/channels/events/messages/deviceSetDeleted"
+      - $ref: "#/channels/events/messages/musicUpdated"
+      - $ref: "#/channels/events/messages/termination"
 
 components:
   securitySchemes:
@@ -134,26 +134,26 @@ components:
       summary: Keepalive sent by the client.
       payload:
         allOf:
-          - $ref: '#/components/schemas/Envelope'
+          - $ref: "#/components/schemas/Envelope"
           - type: object
             properties:
               type:
                 const: ping
               data:
-                type: 'null'
+                type: "null"
       examples:
         - payload:
             id: 4f8a6c1e-2b3d-4e5f-8a9b-0c1d2e3f4a5b
             specversion: 1.1.0
             source: urn:example:client
-            time: '2026-01-01T12:00:00.000Z'
+            time: "2026-01-01T12:00:00.000Z"
             type: ping
             data: null
     pong:
       summary: Answer to a ping.
       payload:
         allOf:
-          - $ref: '#/components/schemas/Envelope'
+          - $ref: "#/components/schemas/Envelope"
           - type: object
             required:
               - data
@@ -171,35 +171,35 @@ components:
         - payload:
             id: 9b1c2d3e-4f5a-4b6c-8d7e-1f2a3b4c5d6e
             source: hub
-            time: '2026-01-01T12:00:00.120Z'
+            time: "2026-01-01T12:00:00.120Z"
             specversion: 1.1.0
             type: pong
             data:
-              lastModified: '2026-01-01T11:45:19.119Z'
+              lastModified: "2026-01-01T11:45:19.119Z"
     deviceStateChanged:
       summary: Attributes of a device changed, such as a light being turned on.
       description: Only the attributes that changed are included.
       payload:
         allOf:
-          - $ref: '#/components/schemas/Envelope'
+          - $ref: "#/components/schemas/Envelope"
           - type: object
             properties:
               type:
                 const: deviceStateChanged
               data:
-                $ref: '#/components/schemas/DeviceChange'
+                $ref: "#/components/schemas/DeviceChange"
       examples:
         - payload:
             id: 2a3b4c5d-6e7f-4a8b-9c0d-1e2f3a4b5c6d
             source: urn:com:ikea:homesmart:iotc:zigbee
-            time: '2026-01-01T12:00:01.000Z'
+            time: "2026-01-01T12:00:01.000Z"
             specversion: 1.1.0
             type: deviceStateChanged
             data:
               id: 6b2d4e8f-1a3c-4b5d-8e7f-9a0b1c2d3e4f_1
               type: light
               deviceType: light
-              lastSeen: '2026-01-01T12:00:01.000Z'
+              lastSeen: "2026-01-01T12:00:01.000Z"
               remoteLinks: []
               attributes:
                 isOn: true
@@ -208,30 +208,30 @@ components:
       summary: Configuration of a device changed, such as its name or room.
       payload:
         allOf:
-          - $ref: '#/components/schemas/Envelope'
+          - $ref: "#/components/schemas/Envelope"
           - type: object
             properties:
               type:
                 const: deviceConfigurationChanged
               data:
-                $ref: '#/components/schemas/DeviceChange'
+                $ref: "#/components/schemas/DeviceChange"
     deviceAdded:
       summary: A device was paired.
       payload:
         allOf:
-          - $ref: '#/components/schemas/Envelope'
+          - $ref: "#/components/schemas/Envelope"
           - type: object
             properties:
               type:
                 const: deviceAdded
               data:
-                $ref: 'openapi.yaml#/components/schemas/Device'
+                $ref: "openapi.yaml#/components/schemas/Device"
     deviceRemoved:
       summary: A device was removed.
       description: Unlike other events the id is in `removedDeviceId` instead of `data`.
       payload:
         allOf:
-          - $ref: '#/components/schemas/Envelope'
+          - $ref: "#/components/schemas/Envelope"
           - type: object
             required:
               - removedDeviceId
@@ -249,18 +249,18 @@ components:
       summary: A new device was found while pairing.
       payload:
         allOf:
-          - $ref: '#/components/schemas/Envelope'
+          - $ref: "#/components/schemas/Envelope"
           - type: object
             properties:
               type:
                 const: deviceDiscovered
               data:
-                $ref: '#/components/schemas/IdOnly'
+                $ref: "#/components/schemas/IdOnly"
     remotePressEvent:
       summary: A button on a shortcut button or remote was pressed.
       payload:
         allOf:
-          - $ref: '#/components/schemas/Envelope'
+          - $ref: "#/components/schemas/Envelope"
           - type: object
             properties:
               type:
@@ -276,81 +276,81 @@ components:
                     description: Device id of the button.
                   clickPattern:
                     type: string
-                    description: 'Known values: `singlePress`, `doublePress`, `longPress`.'
+                    description: "Known values: `singlePress`, `doublePress`, `longPress`."
     sceneCreated:
       summary: A scene was created.
       payload:
-        $ref: '#/components/schemas/SceneEvent'
+        $ref: "#/components/schemas/SceneEvent"
     sceneUpdated:
       summary: A scene was changed.
       payload:
-        $ref: '#/components/schemas/SceneEvent'
+        $ref: "#/components/schemas/SceneEvent"
     sceneDeleted:
       summary: A scene was deleted.
       payload:
-        $ref: '#/components/schemas/SceneEvent'
+        $ref: "#/components/schemas/SceneEvent"
     sceneTriggered:
       summary: A scene started running.
       payload:
-        $ref: '#/components/schemas/SceneEvent'
+        $ref: "#/components/schemas/SceneEvent"
     sceneCompleted:
       summary: A scene finished running.
       payload:
-        $ref: '#/components/schemas/SceneEvent'
+        $ref: "#/components/schemas/SceneEvent"
     roomCreated:
       summary: A room was created.
       payload:
-        $ref: '#/components/schemas/RoomEvent'
+        $ref: "#/components/schemas/RoomEvent"
     roomUpdated:
       summary: A room was changed.
       payload:
-        $ref: '#/components/schemas/RoomEvent'
+        $ref: "#/components/schemas/RoomEvent"
     roomDeleted:
       summary: A room was deleted.
       payload:
         allOf:
-          - $ref: '#/components/schemas/Envelope'
+          - $ref: "#/components/schemas/Envelope"
           - type: object
             properties:
               type:
                 const: roomDeleted
               data:
-                $ref: '#/components/schemas/IdOnly'
+                $ref: "#/components/schemas/IdOnly"
     deviceSetCreated:
       summary: A device set was created.
       payload:
-        $ref: '#/components/schemas/DeviceSetEvent'
+        $ref: "#/components/schemas/DeviceSetEvent"
     deviceSetUpdated:
       summary: A device set was changed.
       payload:
-        $ref: '#/components/schemas/DeviceSetEvent'
+        $ref: "#/components/schemas/DeviceSetEvent"
     deviceSetDeleted:
       summary: A device set was deleted.
       payload:
         allOf:
-          - $ref: '#/components/schemas/Envelope'
+          - $ref: "#/components/schemas/Envelope"
           - type: object
             properties:
               type:
                 const: deviceSetDeleted
               data:
-                $ref: '#/components/schemas/IdOnly'
+                $ref: "#/components/schemas/IdOnly"
     musicUpdated:
       summary: Playlists or favorites changed.
       payload:
         allOf:
-          - $ref: '#/components/schemas/Envelope'
+          - $ref: "#/components/schemas/Envelope"
           - type: object
             properties:
               type:
                 const: musicUpdated
               data:
-                $ref: 'openapi.yaml#/components/schemas/Music'
+                $ref: "openapi.yaml#/components/schemas/Music"
     termination:
       summary: The hub is closing the connection.
       payload:
         allOf:
-          - $ref: '#/components/schemas/Envelope'
+          - $ref: "#/components/schemas/Envelope"
           - type: object
             properties:
               type:
@@ -425,17 +425,17 @@ components:
           type: object
           additionalProperties: true
         capabilities:
-          $ref: 'openapi.yaml#/components/schemas/Capabilities'
+          $ref: "openapi.yaml#/components/schemas/Capabilities"
         room:
-          $ref: 'openapi.yaml#/components/schemas/Room'
+          $ref: "openapi.yaml#/components/schemas/Room"
         deviceSet:
           type: array
           items:
-            $ref: 'openapi.yaml#/components/schemas/DeviceSet'
+            $ref: "openapi.yaml#/components/schemas/DeviceSet"
 
     SceneEvent:
       allOf:
-        - $ref: '#/components/schemas/Envelope'
+        - $ref: "#/components/schemas/Envelope"
         - type: object
           properties:
             type:
@@ -447,11 +447,11 @@ components:
                 - sceneTriggered
                 - sceneCompleted
             data:
-              $ref: 'openapi.yaml#/components/schemas/Scene'
+              $ref: "openapi.yaml#/components/schemas/Scene"
 
     RoomEvent:
       allOf:
-        - $ref: '#/components/schemas/Envelope'
+        - $ref: "#/components/schemas/Envelope"
         - type: object
           properties:
             type:
@@ -460,11 +460,11 @@ components:
                 - roomCreated
                 - roomUpdated
             data:
-              $ref: 'openapi.yaml#/components/schemas/Room'
+              $ref: "openapi.yaml#/components/schemas/Room"
 
     DeviceSetEvent:
       allOf:
-        - $ref: '#/components/schemas/Envelope'
+        - $ref: "#/components/schemas/Envelope"
         - type: object
           properties:
             type:
@@ -473,4 +473,4 @@ components:
                 - deviceSetCreated
                 - deviceSetUpdated
             data:
-              $ref: 'openapi.yaml#/components/schemas/DeviceSet'
+              $ref: "openapi.yaml#/components/schemas/DeviceSet"
