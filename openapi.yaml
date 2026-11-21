@@ -26,6 +26,8 @@ info:
     Many string fields hold values the hub adds to over time (device types,
     capabilities, icons). They are typed as plain strings with the known values in
     the description, so generated clients keep working when IKEA adds new ones.
+  contact:
+    url: https://github.com/bombsimon/dirigera-openapi
   license:
     name: MIT
     identifier: MIT

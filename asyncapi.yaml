@@ -14,6 +14,8 @@ info:
 
     The connection and the `ping`/`pong` exchange were verified against a real hub.
     Event payloads come from community clients. See the README for sources.
+  contact:
+    url: https://github.com/bombsimon/dirigera-openapi
   license:
     name: MIT
     url: https://opensource.org/license/mit
