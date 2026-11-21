@@ -1,0 +1,2547 @@
+openapi: 3.1.0
+info:
+  title: IKEA DIRIGERA local API
+  version: 0.1.0
+  summary: Community maintained description of the local REST API on the IKEA DIRIGERA hub.
+  description: |
+    The DIRIGERA hub exposes an HTTPS API on port 8443 of your local network. IKEA
+    doesn't document it, so this specification is assembled from community clients
+    and checked against a real hub. See the README for every source.
+
+    The hub uses a self-signed certificate, so clients must disable certificate
+    verification or pin the hub certificate.
+
+    Every operation carries two vendor extensions:
+
+    * `x-verified`: `true` when the operation was called against a real hub while
+      writing this spec and its response matched the schema. Operations that change
+      state haven't been verified yet, and their success status is given as `2XX`
+      since the exact code isn't known.
+    * `x-sources`: the community projects that use the operation, as GitHub
+      `owner/repo` slugs. `x-source-repositories` at the root links each one.
+
+    Real-time updates are pushed over a websocket that OpenAPI can't describe. It's
+    covered by `asyncapi.yaml` in the same repository.
+
+    Many string fields hold values the hub adds to over time (device types,
+    capabilities, icons). They are typed as plain strings with the known values in
+    the description, so generated clients keep working when IKEA adds new ones.
+  license:
+    name: MIT
+    identifier: MIT
+x-source-repositories:
+  0xtosh/denkigera: https://github.com/0xtosh/denkigera
+  bombsimon/dirigera-rs: https://github.com/bombsimon/dirigera-rs
+  dvdgeisler/DirigeraClient: https://github.com/dvdgeisler/DirigeraClient
+  hagronnestad/dirigera: https://github.com/hagronnestad/dirigera
+  kaliberjs/ikea-dirigera: https://github.com/kaliberjs/ikea-dirigera
+  Leggin/dirigera: https://github.com/Leggin/dirigera
+  lpgera/dirigera: https://github.com/lpgera/dirigera
+  mattias73andersson/dirigera-client-poc: https://github.com/mattias73andersson/dirigera-client-poc
+  openhab/openhab-addons: https://github.com/openhab/openhab-addons/tree/main/bundles/org.openhab.binding.dirigera
+  phillipp/dirigera: https://github.com/phillipp/dirigera
+  rtoma/dirigera-prometheus-exporter: https://github.com/rtoma/dirigera-prometheus-exporter
+  salex-org/ikea-dirigera-client: https://github.com/salex-org/ikea-dirigera-client
+  sanjoyg/dirigera_platform: https://github.com/sanjoyg/dirigera_platform
+  thembo-sec/dirigera_client: https://github.com/thembo-sec/dirigera_client
+  uboness/homebridge-dirigera: https://github.com/uboness/homebridge-dirigera
+  wjtje/DIRIGERA: https://github.com/wjtje/DIRIGERA
+  zinen/node-dirigera-promise: https://github.com/zinen/node-dirigera-promise
+servers:
+  - url: https://{host}:8443/v1
+    description: DIRIGERA hub on the local network
+    variables:
+      host:
+        default: 192.168.1.100
+        description: IP address or hostname of the hub.
+security:
+  - bearerAuth: []
+tags:
+  - name: Authentication
+    description: Pair a client with the hub to obtain a bearer token.
+  - name: Home
+    description: Snapshot of everything the hub knows about.
+  - name: Hub
+    description: Status and firmware of the hub itself.
+  - name: Devices
+    description: Read and control individual devices.
+  - name: Device groups
+    description: Control many devices at once by room, device set, audio group or type.
+  - name: Rooms
+  - name: Device sets
+    description: User defined groups of devices, shown as "groups" in the IKEA app.
+  - name: Scenes
+    description: Scenes and automations.
+  - name: Remote links
+    description: Which devices a remote or controller operates.
+  - name: Users
+  - name: Music
+    description: Sonos integration.
+
+paths:
+  /oauth/authorize:
+    get:
+      tags:
+        - Authentication
+      operationId: authorize
+      summary: Start pairing
+      description: |
+        First step of pairing, an OAuth 2 authorization code flow with PKCE. Generate a
+        random code verifier, send its SHA-256 base64url challenge and keep the
+        returned code. Then press the action button on the bottom of the hub and call
+        `POST /oauth/token` within 60 seconds.
+      security: []
+      x-verified: true
+      x-sources:
+        - lpgera/dirigera
+        - Leggin/dirigera
+        - dvdgeisler/DirigeraClient
+        - openhab/openhab-addons
+        - thembo-sec/dirigera_client
+        - mattias73andersson/dirigera-client-poc
+        - phillipp/dirigera
+        - wjtje/DIRIGERA
+        - bombsimon/dirigera-rs
+      parameters:
+        - name: audience
+          in: query
+          required: true
+          schema:
+            type: string
+            const: homesmart.local
+        - name: response_type
+          in: query
+          required: true
+          schema:
+            type: string
+            const: code
+        - name: code_challenge
+          in: query
+          required: true
+          description: Base64url encoded SHA-256 hash of the code verifier, without padding.
+          schema:
+            type: string
+        - name: code_challenge_method
+          in: query
+          required: true
+          schema:
+            type: string
+            const: S256
+      responses:
+        '200':
+          description: Authorization code to exchange for a token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizationCode'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      tags:
+        - Authentication
+      operationId: cancelAuthorization
+      summary: Cancel pairing
+      description: Cancels a pending authorization started with `GET /oauth/authorize`.
+      security: []
+      x-verified: false
+      x-sources:
+        - dvdgeisler/DirigeraClient
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - code
+                - code_verifier
+              properties:
+                code:
+                  type: string
+                code_verifier:
+                  type: string
+      responses:
+        '2XX':
+          description: Authorization cancelled.
+        default:
+          $ref: '#/components/responses/Error'
+  /oauth/authorize/{transactionId}:
+    get:
+      tags:
+        - Authentication
+      operationId: getAuthorizationStatus
+      summary: Poll an authorization transaction
+      description: The response format isn't known yet.
+      x-verified: false
+      x-sources:
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '2XX':
+          description: Authorization status.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        default:
+          $ref: '#/components/responses/Error'
+  /oauth/token:
+    post:
+      tags:
+        - Authentication
+      operationId: createToken
+      summary: Exchange a code for a token
+      description: |
+        Second step of pairing. The hub answers with an error until the action button
+        on the hub has been pressed, so clients usually retry every second for up to 60
+        seconds. The returned token doesn't expire.
+      security: []
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - Leggin/dirigera
+        - dvdgeisler/DirigeraClient
+        - openhab/openhab-addons
+        - thembo-sec/dirigera_client
+        - mattias73andersson/dirigera-client-poc
+        - phillipp/dirigera
+        - rtoma/dirigera-prometheus-exporter
+        - wjtje/DIRIGERA
+        - bombsimon/dirigera-rs
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+      responses:
+        '2XX':
+          description: Bearer token to use for every other request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /home:
+    get:
+      tags:
+        - Home
+      operationId: getHome
+      summary: Get everything
+      description: |
+        Returns the hub, all devices, rooms, scenes, device sets, users and adaptive
+        lighting profiles in a single response. This is the only way to list device
+        sets and adaptive profiles.
+      x-verified: true
+      x-sources:
+        - lpgera/dirigera
+        - Leggin/dirigera
+        - dvdgeisler/DirigeraClient
+        - openhab/openhab-addons
+        - rtoma/dirigera-prometheus-exporter
+        - zinen/node-dirigera-promise
+      responses:
+        '200':
+          description: The complete home.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Home'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /hub/status:
+    get:
+      tags:
+        - Hub
+      operationId: getHubStatus
+      summary: Get the hub
+      x-verified: true
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+      responses:
+        '200':
+          description: The hub as a device.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hub'
+        default:
+          $ref: '#/components/responses/Error'
+  /hub/ota/check:
+    put:
+      tags:
+        - Hub
+      operationId: checkFirmwareUpdate
+      summary: Check for firmware updates
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+      responses:
+        '2XX':
+          description: Check started. Progress shows up in the hub's `ota*` attributes.
+        default:
+          $ref: '#/components/responses/Error'
+  /hub/ota/update:
+    put:
+      tags:
+        - Hub
+      operationId: installFirmwareUpdate
+      summary: Install a downloaded firmware update
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+      responses:
+        '2XX':
+          description: Update started.
+        default:
+          $ref: '#/components/responses/Error'
+  /hub/ota/environment:
+    put:
+      tags:
+        - Hub
+      operationId: setFirmwareEnvironment
+      summary: Switch firmware channel
+      description: Moves the hub to another firmware channel. Pre-release channels may be unstable.
+      x-verified: false
+      x-sources:
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - environment
+              properties:
+                environment:
+                  type: string
+                  description: 'Known values: `prod`, `alpha`, `dev`.'
+      responses:
+        '2XX':
+          description: Channel changed.
+        default:
+          $ref: '#/components/responses/Error'
+  /hub/cloud-integration:
+    put:
+      tags:
+        - Hub
+      operationId: setCloudIntegration
+      summary: Toggle the persistent cloud connection
+      x-verified: false
+      x-sources:
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - isActive
+              properties:
+                isActive:
+                  type: boolean
+      responses:
+        '2XX':
+          description: Setting changed.
+        default:
+          $ref: '#/components/responses/Error'
+
+  /devices:
+    get:
+      tags:
+        - Devices
+      operationId: listDevices
+      summary: List devices
+      description: Every paired device, including the hub itself.
+      x-verified: true
+      x-sources:
+        - lpgera/dirigera
+        - Leggin/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+        - openhab/openhab-addons
+        - rtoma/dirigera-prometheus-exporter
+        - salex-org/ikea-dirigera-client
+        - hagronnestad/dirigera
+        - kaliberjs/ikea-dirigera
+        - 0xtosh/denkigera
+        - phillipp/dirigera
+        - sanjoyg/dirigera_platform
+        - bombsimon/dirigera-rs
+      responses:
+        '200':
+          description: All devices.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+        default:
+          $ref: '#/components/responses/Error'
+  /devices/{deviceId}:
+    parameters:
+      - $ref: '#/components/parameters/DeviceId'
+    get:
+      tags:
+        - Devices
+      operationId: getDevice
+      summary: Get a device
+      x-verified: true
+      x-sources:
+        - lpgera/dirigera
+        - Leggin/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+        - openhab/openhab-addons
+        - 0xtosh/denkigera
+        - kaliberjs/ikea-dirigera
+        - phillipp/dirigera
+        - bombsimon/dirigera-rs
+      responses:
+        '200':
+          description: The device.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      tags:
+        - Devices
+      operationId: updateDevice
+      summary: Control or configure a device
+      description: |
+        Changes one or more attributes. The body is an array of patches, and every
+        client sends a single element. Only attributes listed in the device's
+        `capabilities.canReceive` can be changed.
+
+        This is also how a device is renamed (`customName`) and how hub settings
+        such as `coordinates` are changed, using the hub's device id.
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - Leggin/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+        - openhab/openhab-addons
+        - sanjoyg/dirigera_platform
+        - hagronnestad/dirigera
+        - kaliberjs/ikea-dirigera
+        - 0xtosh/denkigera
+        - bombsimon/dirigera-rs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DevicePatchList'
+            examples:
+              turnOn:
+                summary: Turn on
+                value:
+                  - attributes:
+                      isOn: true
+              dim:
+                summary: Dim over one second
+                value:
+                  - attributes:
+                      lightLevel: 40
+                    transitionTime: 1000
+              color:
+                summary: Set color
+                value:
+                  - attributes:
+                      colorHue: 240
+                      colorSaturation: 0.8
+              rename:
+                summary: Rename
+                value:
+                  - attributes:
+                      customName: Desk lamp
+      responses:
+        '2XX':
+          description: Change accepted. The new state arrives as a `deviceStateChanged` event.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+        - Devices
+      operationId: deleteDevice
+      summary: Remove a device
+      description: Unpairs the device from the hub.
+      x-verified: false
+      x-sources:
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+      responses:
+        '2XX':
+          description: Device removed.
+        default:
+          $ref: '#/components/responses/Error'
+  /devices/{deviceId}/identify:
+    parameters:
+      - $ref: '#/components/parameters/DeviceId'
+    put:
+      tags:
+        - Devices
+      operationId: identifyDevice
+      summary: Blink a device
+      description: Makes the device blink or beep for `period` seconds. Send `0` to stop.
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+        - uboness/homebridge-dirigera
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - period
+              properties:
+                period:
+                  type: integer
+                  minimum: 0
+                  description: Seconds to identify for. `0` stops it.
+                  examples:
+                    - 30
+      responses:
+        '2XX':
+          description: Identification started or stopped.
+        default:
+          $ref: '#/components/responses/Error'
+
+  /devices/all:
+    patch:
+      tags:
+        - Device groups
+      operationId: updateDevicesByType
+      summary: Control every device of a type
+      x-verified: false
+      x-sources:
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+      parameters:
+        - name: deviceType
+          in: query
+          required: true
+          schema:
+            type: string
+            description: A device type such as `light` or `outlet`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DevicePatchList'
+      responses:
+        '2XX':
+          description: Change accepted.
+        default:
+          $ref: '#/components/responses/Error'
+  /devices/room/{roomId}:
+    patch:
+      tags:
+        - Device groups
+      operationId: updateDevicesInRoom
+      summary: Control every device in a room
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+        - hagronnestad/dirigera
+      parameters:
+        - $ref: '#/components/parameters/RoomId'
+        - $ref: '#/components/parameters/DeviceTypeFilter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DevicePatchList'
+      responses:
+        '2XX':
+          description: Change accepted.
+        default:
+          $ref: '#/components/responses/Error'
+  /devices/set/{deviceSetId}:
+    patch:
+      tags:
+        - Device groups
+      operationId: updateDevicesInSet
+      summary: Control every device in a device set
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+        - openhab/openhab-addons
+        - sanjoyg/dirigera_platform
+      parameters:
+        - $ref: '#/components/parameters/DeviceSetId'
+        - $ref: '#/components/parameters/DeviceTypeFilter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DevicePatchList'
+      responses:
+        '2XX':
+          description: Change accepted.
+        default:
+          $ref: '#/components/responses/Error'
+  /devices/audio_group/{audioGroupId}:
+    patch:
+      tags:
+        - Device groups
+      operationId: updateDevicesInAudioGroup
+      summary: Control every speaker in an audio group
+      x-verified: false
+      x-sources:
+        - dvdgeisler/DirigeraClient
+      parameters:
+        - name: audioGroupId
+          in: path
+          required: true
+          description: The `audioGroup` attribute of a speaker.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/DeviceTypeFilter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DevicePatchList'
+      responses:
+        '2XX':
+          description: Change accepted.
+        default:
+          $ref: '#/components/responses/Error'
+  /step/{targetId}:
+    post:
+      tags:
+        - Device groups
+      operationId: stepLightLevel
+      summary: Step the light level up or down
+      description: Relative dimming, as done by holding a button on a remote.
+      x-verified: false
+      x-sources:
+        - dvdgeisler/DirigeraClient
+      parameters:
+        - name: targetId
+          in: path
+          required: true
+          description: Id of a device, room or device set.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/DeviceTypeFilter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - stepSize
+              properties:
+                type:
+                  type: string
+                  description: 'Known values: `lightLevel`.'
+                stepSize:
+                  type: integer
+                  description: Percentage points to step, negative to step down.
+                transitionTime:
+                  type: integer
+                  description: Transition time in milliseconds.
+      responses:
+        '2XX':
+          description: Step accepted.
+        default:
+          $ref: '#/components/responses/Error'
+
+  /rooms:
+    get:
+      tags:
+        - Rooms
+      operationId: listRooms
+      summary: List rooms
+      x-verified: true
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+        - openhab/openhab-addons
+        - salex-org/ikea-dirigera-client
+      responses:
+        '200':
+          description: All rooms.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Room'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      tags:
+        - Rooms
+      operationId: createRoom
+      summary: Create a room
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoomInput'
+      responses:
+        '2XX':
+          description: Room created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Identifier'
+        default:
+          $ref: '#/components/responses/Error'
+  /rooms/{roomId}:
+    parameters:
+      - $ref: '#/components/parameters/RoomId'
+    get:
+      tags:
+        - Rooms
+      operationId: getRoom
+      summary: Get a room
+      x-verified: true
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+      responses:
+        '200':
+          description: The room.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+    put:
+      tags:
+        - Rooms
+      operationId: updateRoom
+      summary: Rename or restyle a room
+      description: Replaces name, icon and color, so send all three.
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoomInput'
+      responses:
+        '2XX':
+          description: Room updated.
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+        - Rooms
+      operationId: deleteRoom
+      summary: Delete a room
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+      responses:
+        '2XX':
+          description: Room deleted. Its devices end up without a room.
+        default:
+          $ref: '#/components/responses/Error'
+  /rooms/{roomId}/devices:
+    parameters:
+      - $ref: '#/components/parameters/RoomId'
+    patch:
+      tags:
+        - Rooms
+      operationId: moveDevicesToRoom
+      summary: Move devices into a room
+      description: Moving a device is done on the target room, there is no room field to change on a device.
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - deviceIds
+              properties:
+                deviceIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '2XX':
+          description: Devices moved.
+        default:
+          $ref: '#/components/responses/Error'
+
+  /device-set:
+    post:
+      tags:
+        - Device sets
+      operationId: createDeviceSet
+      summary: Create a device set
+      description: Device sets are listed through `GET /home`, there is no list endpoint.
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceSetInput'
+      responses:
+        '2XX':
+          description: Device set created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Identifier'
+        default:
+          $ref: '#/components/responses/Error'
+  /device-set/{deviceSetId}:
+    parameters:
+      - $ref: '#/components/parameters/DeviceSetId'
+    put:
+      tags:
+        - Device sets
+      operationId: updateDeviceSet
+      summary: Rename a device set
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceSetInput'
+      responses:
+        '2XX':
+          description: Device set updated.
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+        - Device sets
+      operationId: deleteDeviceSet
+      summary: Delete a device set
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+      responses:
+        '2XX':
+          description: Device set deleted.
+        default:
+          $ref: '#/components/responses/Error'
+  /device-set/{deviceSetId}/configuration:
+    parameters:
+      - $ref: '#/components/parameters/DeviceSetId'
+    patch:
+      tags:
+        - Device sets
+      operationId: configureDeviceSet
+      summary: Choose the devices in a device set
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - deviceIds
+              properties:
+                deviceIds:
+                  type: array
+                  items:
+                    type: string
+                roomId:
+                  type: string
+                remoteLinkIds:
+                  type: array
+                  description: Remotes that should control the set.
+                  items:
+                    type: string
+      responses:
+        '2XX':
+          description: Configuration updated.
+        default:
+          $ref: '#/components/responses/Error'
+
+  /scenes:
+    get:
+      tags:
+        - Scenes
+      operationId: listScenes
+      summary: List scenes
+      x-verified: true
+      x-sources:
+        - lpgera/dirigera
+        - Leggin/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+        - openhab/openhab-addons
+        - salex-org/ikea-dirigera-client
+        - sanjoyg/dirigera_platform
+        - bombsimon/dirigera-rs
+      responses:
+        '200':
+          description: All scenes and automations.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Scene'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      tags:
+        - Scenes
+      operationId: createScene
+      summary: Create a scene
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - Leggin/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+        - openhab/openhab-addons
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SceneInput'
+            examples:
+              buttonPress:
+                summary: Run on a shortcut button press
+                value:
+                  type: customScene
+                  info:
+                    name: Movie night
+                    icon: scenes_clapper
+                  triggers:
+                    - type: controller
+                      trigger:
+                        controllerType: shortcutController
+                        clickPattern: singlePress
+                        buttonIndex: 0
+                        deviceId: 3f1c9a2e-0d4b-4c55-9a51-0c8f6a1d2b3c_1
+                  actions:
+                    - type: device
+                      deviceId: 6b2d4e8f-1a3c-4b5d-8e7f-9a0b1c2d3e4f_1
+                      attributes:
+                        isOn: true
+                        lightLevel: 20
+                  commands: []
+      responses:
+        '2XX':
+          description: Scene created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Identifier'
+        default:
+          $ref: '#/components/responses/Error'
+  /scenes/{sceneId}:
+    parameters:
+      - $ref: '#/components/parameters/SceneId'
+    get:
+      tags:
+        - Scenes
+      operationId: getScene
+      summary: Get a scene
+      x-verified: true
+      x-sources:
+        - lpgera/dirigera
+        - Leggin/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+        - openhab/openhab-addons
+        - sanjoyg/dirigera_platform
+        - bombsimon/dirigera-rs
+      responses:
+        '200':
+          description: The scene.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scene'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+    put:
+      tags:
+        - Scenes
+      operationId: updateScene
+      summary: Replace a scene
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SceneInput'
+      responses:
+        '2XX':
+          description: Scene updated.
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+        - Scenes
+      operationId: deleteScene
+      summary: Delete a scene
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - Leggin/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+        - openhab/openhab-addons
+      responses:
+        '2XX':
+          description: Scene deleted.
+        default:
+          $ref: '#/components/responses/Error'
+  /scenes/{sceneId}/trigger:
+    parameters:
+      - $ref: '#/components/parameters/SceneId'
+    post:
+      tags:
+        - Scenes
+      operationId: triggerScene
+      summary: Run a scene now
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - Leggin/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+        - openhab/openhab-addons
+        - sanjoyg/dirigera_platform
+        - bombsimon/dirigera-rs
+      responses:
+        '2XX':
+          description: Scene triggered.
+        default:
+          $ref: '#/components/responses/Error'
+  /scenes/{sceneId}/undo:
+    parameters:
+      - $ref: '#/components/parameters/SceneId'
+    post:
+      tags:
+        - Scenes
+      operationId: undoScene
+      summary: Undo a scene
+      description: Reverts the last run, allowed within `undoAllowedDuration` seconds of triggering.
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - Leggin/dirigera
+        - openhab/openhab-addons
+        - sanjoyg/dirigera_platform
+        - bombsimon/dirigera-rs
+      responses:
+        '2XX':
+          description: Scene undone.
+        default:
+          $ref: '#/components/responses/Error'
+
+  /remoteLinks/{remoteLinkId}/targets:
+    put:
+      tags:
+        - Remote links
+      operationId: setRemoteLinkTargets
+      summary: Choose what a remote controls
+      x-verified: false
+      x-sources:
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+      parameters:
+        - name: remoteLinkId
+          in: path
+          required: true
+          description: Device id of the remote or controller.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - targetIds
+              properties:
+                targetIds:
+                  type: array
+                  description: Device ids the remote should control.
+                  items:
+                    type: string
+      responses:
+        '2XX':
+          description: Targets updated.
+        default:
+          $ref: '#/components/responses/Error'
+
+  /users:
+    get:
+      tags:
+        - Users
+      operationId: listUsers
+      summary: List users
+      description: Everyone paired with the hub, including API clients created through pairing.
+      x-verified: true
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+        - openhab/openhab-addons
+        - salex-org/ikea-dirigera-client
+      responses:
+        '200':
+          description: All users.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        default:
+          $ref: '#/components/responses/Error'
+  /users/me:
+    get:
+      tags:
+        - Users
+      operationId: getCurrentUser
+      summary: Get the current user
+      description: The user the bearer token belongs to.
+      x-verified: true
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+      responses:
+        '200':
+          description: The current user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      tags:
+        - Users
+      operationId: renameCurrentUser
+      summary: Rename the current user
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        '2XX':
+          description: User renamed.
+        default:
+          $ref: '#/components/responses/Error'
+  /users/{userId}:
+    delete:
+      tags:
+        - Users
+      operationId: deleteUser
+      summary: Remove a user
+      description: Revokes the user's access, which also invalidates tokens created for it.
+      x-verified: false
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The `uid` of the user.
+          schema:
+            type: string
+      responses:
+        '2XX':
+          description: User removed.
+        default:
+          $ref: '#/components/responses/Error'
+
+  /music:
+    get:
+      tags:
+        - Music
+      operationId: getMusic
+      summary: Get playlists and favorites
+      x-verified: true
+      x-sources:
+        - lpgera/dirigera
+        - dvdgeisler/DirigeraClient
+        - thembo-sec/dirigera_client
+        - openhab/openhab-addons
+      responses:
+        '200':
+          description: Music library.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Music'
+        default:
+          $ref: '#/components/responses/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Token from `POST /oauth/token`.
+
+  parameters:
+    DeviceId:
+      name: deviceId
+      in: path
+      required: true
+      description: Device id, usually a UUID followed by `_1`.
+      schema:
+        type: string
+      example: 6b2d4e8f-1a3c-4b5d-8e7f-9a0b1c2d3e4f_1
+    RoomId:
+      name: roomId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DeviceSetId:
+      name: deviceSetId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SceneId:
+      name: sceneId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DeviceTypeFilter:
+      name: deviceType
+      in: query
+      required: false
+      description: Only affect devices of this device type, such as `light`.
+      schema:
+        type: string
+
+  responses:
+    Error:
+      description: |
+        Error reported by the API. Requests to paths that don't exist get an HTML page
+        from the web server instead of this JSON body.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: No such resource.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: The request body or an id was invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          examples:
+            - Error
+        message:
+          type: string
+          examples:
+            - 'invalid device id: all'
+
+    Identifier:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+
+    AuthorizationCode:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          description: Code to send to `POST /oauth/token`.
+
+    TokenRequest:
+      type: object
+      required:
+        - grant_type
+      properties:
+        grant_type:
+          type: string
+          description: '`authorization_code` when pairing, `refresh_token` to refresh.'
+          enum:
+            - authorization_code
+            - refresh_token
+        code:
+          type: string
+          description: Code from `GET /oauth/authorize`.
+        code_verifier:
+          type: string
+          description: The verifier the code challenge was made from.
+        name:
+          type: string
+          description: Client name shown as the user's name in the IKEA app, usually the hostname.
+        refresh_token:
+          type: string
+
+    Token:
+      type: object
+      required:
+        - access_token
+      properties:
+        access_token:
+          type: string
+
+    Home:
+      type: object
+      required:
+        - hub
+        - devices
+        - rooms
+        - scenes
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        hub:
+          $ref: '#/components/schemas/Hub'
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/Device'
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        scenes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Scene'
+        rooms:
+          type: array
+          items:
+            $ref: '#/components/schemas/Room'
+        deviceSets:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceSet'
+        music:
+          $ref: '#/components/schemas/Music'
+        adaptiveProfiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdaptiveProfile'
+
+    Device:
+      type: object
+      description: |
+        Any device, including the hub. `type` is the broad category and `deviceType`
+        the specific kind. Which attributes are present depends on the kind, see
+        `DeviceAttributes`.
+      required:
+        - id
+        - type
+        - deviceType
+        - createdAt
+        - isReachable
+        - lastSeen
+        - attributes
+        - capabilities
+        - remoteLinks
+      properties:
+        id:
+          type: string
+          examples:
+            - 6b2d4e8f-1a3c-4b5d-8e7f-9a0b1c2d3e4f_1
+        relationId:
+          type: string
+          description: Shared by devices that are part of the same physical product, such as the buttons of one remote.
+        type:
+          type: string
+          description: |
+            Category. Known values: `airPurifier`, `blinds`, `controller`, `gateway`,
+            `light`, `outlet`, `repeater`, `sensor`, `speaker`, `unknown`.
+          examples:
+            - light
+        deviceType:
+          type: string
+          description: |
+            Kind of device. Known values: `airPurifier`, `blinds`, `blindsController`,
+            `environmentSensor`, `gateway`, `genericSwitch`, `light`, `lightController`,
+            `lightSensor`, `motionSensor`, `occupancySensor`, `openCloseSensor`,
+            `outlet`, `repeater`, `shortcutController`, `soundController`, `speaker`,
+            `waterSensor`.
+          examples:
+            - light
+        createdAt:
+          type: string
+          format: date-time
+        isReachable:
+          type: boolean
+        lastSeen:
+          type: string
+          format: date-time
+        attributes:
+          $ref: '#/components/schemas/DeviceAttributes'
+        capabilities:
+          $ref: '#/components/schemas/Capabilities'
+        room:
+          $ref: '#/components/schemas/Room'
+        deviceSet:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceSet'
+        remoteLinks:
+          type: array
+          description: Ids of remotes that control this device.
+          items:
+            type: string
+        isHidden:
+          type: boolean
+        customIcon:
+          type: string
+        adaptiveProfile:
+          type: object
+          description: Present on lights. Empty unless the light follows an adaptive profile.
+          properties:
+            id:
+              type: string
+            active:
+              type: boolean
+        dynamicFeatures:
+          type: array
+          items:
+            $ref: '#/components/schemas/DynamicFeature'
+
+    Hub:
+      description: The hub, as returned by `GET /hub/status` and in `GET /home`.
+      allOf:
+        - $ref: '#/components/schemas/Device'
+        - type: object
+          properties:
+            environment:
+              type: string
+              description: 'Firmware channel. Known values: `prod`, `alpha`, `dev`.'
+            apiVersion:
+              type: string
+
+    DynamicFeature:
+      type: object
+      required:
+        - type
+        - enabled
+      properties:
+        type:
+          type: string
+          examples:
+            - matterControllerEnabled
+        enabled:
+          type: boolean
+        featureVersion:
+          type: string
+
+    Capabilities:
+      type: object
+      description: |
+        Attributes the device reports (`canSend`) and accepts (`canReceive`). Known
+        values include `blindsState`, `childLock`, `colorHue`, `colorSaturation`,
+        `colorTemperature`, `controlModeLight`, `controlModeSpeaker`, `coordinates`,
+        `countryCode`, `customName`, `isOn`, `lightLevel`, `logLevel`,
+        `permittingJoin`, `statusLight`, `time`, `timezone`, `userConsents`,
+        `windowOpen`.
+      required:
+        - canSend
+        - canReceive
+      properties:
+        canSend:
+          type: array
+          items:
+            type: string
+        canReceive:
+          type: array
+          items:
+            type: string
+
+    DeviceAttributes:
+      type: object
+      description: |
+        Attributes of every device kind combined into one object, since the hub
+        reports them in one flat map. Only the six identifying attributes are always
+        present. The rest depend on the kind and are grouped below by the device kind
+        that has them.
+      additionalProperties: true
+      required:
+        - customName
+        - model
+        - manufacturer
+        - firmwareVersion
+        - hardwareVersion
+        - serialNumber
+      properties:
+        customName:
+          type: string
+          description: Name given in the IKEA app.
+        model:
+          type: string
+          examples:
+            - TRADFRI bulb E27 CWS opal 600lm
+        manufacturer:
+          type: string
+        firmwareVersion:
+          type: string
+        hardwareVersion:
+          type: string
+        serialNumber:
+          type: string
+        productCode:
+          type: string
+        discriminator:
+          type: integer
+          description: Matter pairing discriminator.
+        qrCode:
+          type: string
+          description: Matter pairing QR code payload.
+        setupCode:
+          type: string
+          description: Matter pairing setup code.
+        windowOpen:
+          type: boolean
+        identifyStarted:
+          type: string
+          format: date-time
+        identifyPeriod:
+          type: integer
+        permittingJoin:
+          type: boolean
+        otaStatus:
+          type: string
+          description: 'Known values: `upToDate`, `updateAvailable`.'
+        otaState:
+          type: string
+          description: |
+            Known values: `batteryCheckFailed`, `checkFailed`, `checkInProgress`,
+            `downloadFailed`, `downloadInProgress`, `readyToCheck`, `readyToDownload`,
+            `readyToUpdate`, `updateComplete`, `updateFailed`, `updateInProgress`.
+        otaProgress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        otaPolicy:
+          type: string
+          description: 'Known values: `autoUpdate`, `autoDownload`.'
+        otaScheduleStart:
+          type: string
+          description: Time of day as `HH:MM`.
+        otaScheduleEnd:
+          type: string
+          description: Time of day as `HH:MM`.
+        batteryPercentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+
+        isOn:
+          type: boolean
+          description: Lights, outlets, controllers and the hub.
+        lightLevel:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Brightness in percent. Turn a light off with `isOn` instead of `0`.
+        startupOnOff:
+          type: string
+          description: 'State after a power outage. Known values: `startOn`, `startOff`, `startPrevious`, `startToggle`.'
+        startUpCurrentLevel:
+          type: integer
+        colorMode:
+          type: string
+          description: 'Whether the light shows a white temperature or a color. Known values: `temperature`, `color`.'
+        colorTemperature:
+          type: integer
+          description: Color temperature in Kelvin.
+          examples:
+            - 2700
+        colorTemperatureMin:
+          type: integer
+          description: The coolest temperature in Kelvin. Despite the name this is the higher number.
+          examples:
+            - 4000
+        colorTemperatureMax:
+          type: integer
+          description: The warmest temperature in Kelvin. Despite the name this is the lower number.
+          examples:
+            - 2202
+        startupTemperature:
+          type: integer
+          description: Temperature after a power outage, `-1` keeps the previous one.
+        colorHue:
+          type: number
+          minimum: 0
+          maximum: 360
+        colorSaturation:
+          type: number
+          minimum: 0
+          maximum: 1
+        deviceOnBehavior:
+          $ref: '#/components/schemas/DeviceOnBehavior'
+
+        currentActivePower:
+          type: number
+          description: Outlets with energy metering, in watts.
+        currentAmps:
+          type: number
+        currentVoltage:
+          type: number
+        totalEnergyConsumed:
+          type: number
+          description: Kilowatt hours.
+        totalEnergyConsumedLastUpdated:
+          type: string
+          format: date-time
+        energyConsumedAtLastReset:
+          type: number
+          description: Send `0` to reset the energy counter.
+        timeOfLastEnergyReset:
+          type: string
+          format: date-time
+        childLock:
+          type: boolean
+          description: Outlets and air purifiers.
+        statusLight:
+          type: boolean
+          description: Outlets and air purifiers.
+
+        blindsTargetLevel:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Blinds, in percent closed.
+        blindsCurrentLevel:
+          type: integer
+          minimum: 0
+          maximum: 100
+        blindsState:
+          type: string
+          description: 'Known values: `stopped`, `up`, `down`, and an empty string on remotes.'
+
+        controlMode:
+          type: string
+          description: 'Generic switches. Known values: `light`, `speaker`, `blind`, `shortcut`.'
+        switchGroup:
+          type: integer
+        switchLabel:
+          type: string
+        circadianPresets:
+          type: array
+          description: Remotes and motion sensors. Daily schedule of light level and temperature.
+          items:
+            $ref: '#/components/schemas/AdaptiveScheduleEntry'
+
+        isDetected:
+          type: boolean
+          description: Motion and occupancy sensors.
+        motionDetectedDelay:
+          type: integer
+        sensorConfig:
+          $ref: '#/components/schemas/SensorConfig'
+        isOpen:
+          type: boolean
+          description: Door and window sensors.
+        waterLeakDetected:
+          type: boolean
+          description: Water leak sensors.
+        illuminance:
+          type: number
+          description: Light sensors, in lux.
+        maxIlluminance:
+          type: number
+        minIlluminance:
+          type: number
+        currentTemperature:
+          type: number
+          description: Environment sensors, in degrees Celsius.
+        currentRH:
+          type: number
+          description: Relative humidity in percent.
+        currentPM25:
+          type: number
+          description: Environment sensors and air purifiers, in µg/m³.
+        maxMeasuredPM25:
+          type: number
+        minMeasuredPM25:
+          type: number
+        vocIndex:
+          type: number
+        currentCO2:
+          type: number
+          description: Parts per million.
+        maxMeasuredCO2:
+          type: number
+        minMeasuredCO2:
+          type: number
+
+        fanMode:
+          type: string
+          description: 'Air purifiers. Known values: `auto`, `low`, `medium`, `high`, `on`, `off`.'
+        fanModeSequence:
+          type: string
+        motorState:
+          type: integer
+          description: Fan speed, `0` is off.
+        motorRuntime:
+          type: integer
+          description: Minutes.
+        filterElapsedTime:
+          type: integer
+          description: Minutes.
+        filterAlarmStatus:
+          type: boolean
+        filterLifetime:
+          type: integer
+          description: Minutes.
+
+        playback:
+          type: string
+          description: |
+            Speakers. Known values: `playbackIdle`, `playbackPlaying`, `playbackPaused`,
+            `playbackNext`, `playbackPrevious`, `playbackBuffering`. Send `playbackNext`
+            or `playbackPrevious` to skip.
+        playbackLastChangedTimestamp:
+          type: string
+          format: date-time
+        playbackAudio:
+          $ref: '#/components/schemas/PlaybackAudio'
+        playbackPosition:
+          type: object
+          properties:
+            position:
+              type: integer
+              description: Milliseconds.
+            timestamp:
+              type: string
+              format: date-time
+        playbackAvailableActions:
+          type: object
+          additionalProperties: true
+        playbackModes:
+          type: object
+          properties:
+            crossfade:
+              type: boolean
+            repeat:
+              type: string
+            shuffle:
+              type: boolean
+        volume:
+          type: integer
+          minimum: 0
+          maximum: 100
+        isMuted:
+          type: boolean
+        audioGroup:
+          type: string
+
+        backendConnected:
+          type: boolean
+          description: Hub only.
+        backendConnectionPersistent:
+          type: boolean
+        backendOnboardingComplete:
+          type: boolean
+        backendRegion:
+          type: string
+        backendCountryCode:
+          type: string
+        userConsents:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - value
+            properties:
+              name:
+                type: string
+                description: 'Known values: `analytics`, `diagnostics`.'
+              value:
+                type: string
+                description: 'Known values: `enabled`, `disabled`.'
+        logLevel:
+          type: integer
+        coredump:
+          type: boolean
+        timezone:
+          type: string
+          examples:
+            - Europe/Berlin
+        countryCode:
+          type: string
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        nextSunRise:
+          type: string
+          format: date-time
+        nextSunSet:
+          type: string
+          format: date-time
+        sunPosition:
+          type: string
+        homestate:
+          type: string
+          description: 'Known values: `home`, `away`.'
+
+    DevicePatchList:
+      type: array
+      description: Every known client sends exactly one element.
+      minItems: 1
+      items:
+        $ref: '#/components/schemas/DevicePatch'
+
+    DevicePatch:
+      type: object
+      required:
+        - attributes
+      properties:
+        attributes:
+          $ref: '#/components/schemas/DeviceAttributesPatch'
+        transitionTime:
+          type: integer
+          description: Fade duration in milliseconds, for light level, temperature and color.
+
+    DeviceAttributesPatch:
+      type: object
+      description: Attributes that can be changed. Send only the ones to change, and only those in `capabilities.canReceive`.
+      additionalProperties: true
+      properties:
+        customName:
+          type: string
+        isOn:
+          type: boolean
+        lightLevel:
+          type: integer
+          minimum: 1
+          maximum: 100
+        colorTemperature:
+          type: integer
+          description: Kelvin, between `colorTemperatureMax` and `colorTemperatureMin`.
+        colorHue:
+          type: number
+          minimum: 0
+          maximum: 360
+        colorSaturation:
+          type: number
+          minimum: 0
+          maximum: 1
+        startupOnOff:
+          type: string
+          description: 'Known values: `startOn`, `startOff`, `startPrevious`, `startToggle`.'
+        startupTemperature:
+          type: integer
+        deviceOnBehavior:
+          $ref: '#/components/schemas/DeviceOnBehavior'
+        blindsTargetLevel:
+          type: integer
+          minimum: 0
+          maximum: 100
+        blindsState:
+          type: string
+          description: 'Known values: `stopped`, `up`, `down`.'
+        childLock:
+          type: boolean
+        statusLight:
+          type: boolean
+        energyConsumedAtLastReset:
+          type: number
+          description: Send `0` to reset the energy counter.
+        fanMode:
+          type: string
+        motorState:
+          type: integer
+        volume:
+          type: integer
+          minimum: 0
+          maximum: 100
+        playback:
+          type: string
+        controlMode:
+          type: string
+        sensorConfig:
+          $ref: '#/components/schemas/SensorConfig'
+        circadianPresets:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdaptiveScheduleEntry'
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        timezone:
+          type: string
+        countryCode:
+          type: string
+        logLevel:
+          type: integer
+        permittingJoin:
+          type: boolean
+        userConsents:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              value:
+                type: string
+
+    DeviceOnBehavior:
+      type: object
+      description: What a light does when turned on.
+      properties:
+        behavior:
+          type: string
+          description: 'Known values: `lastValue`, `adaptiveProfile`.'
+        profileId:
+          type: string
+          description: Adaptive profile id, empty unless `behavior` is `adaptiveProfile`.
+
+    SensorConfig:
+      type: object
+      description: When a motion or occupancy sensor turns its lights on, and for how long.
+      properties:
+        scheduleOn:
+          type: boolean
+          description: '`false` reacts all day, `true` only within `schedule`.'
+        onDuration:
+          type: integer
+          description: Seconds the lights stay on after the last motion.
+        schedule:
+          type: object
+          properties:
+            onCondition:
+              $ref: '#/components/schemas/ScheduleCondition'
+            offCondition:
+              $ref: '#/components/schemas/ScheduleCondition'
+
+    ScheduleCondition:
+      type: object
+      required:
+        - time
+      properties:
+        time:
+          type: string
+          description: '`HH:MM`, `sunrise` or `sunset`.'
+        offset:
+          type: integer
+          description: Minutes relative to sunrise or sunset.
+
+    Coordinates:
+      type: object
+      description: Hub location, used for sunrise and sunset. Send an empty object to clear it.
+      properties:
+        latitude:
+          type: number
+        longitude:
+          type: number
+        accuracy:
+          type: number
+
+    AdaptiveProfile:
+      type: object
+      required:
+        - id
+        - name
+        - adaptiveSchedule
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        adaptiveSchedule:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdaptiveScheduleEntry'
+
+    AdaptiveScheduleEntry:
+      type: object
+      required:
+        - startTime
+      properties:
+        startTime:
+          type: string
+          description: '`HH:MM`.'
+        lightLevel:
+          type: integer
+        colorTemperature:
+          type: integer
+
+    PlaybackAudio:
+      type: object
+      properties:
+        serviceType:
+          type: string
+        providerType:
+          type: string
+        playItem:
+          $ref: '#/components/schemas/MusicPlayItem'
+        nextPlayItem:
+          $ref: '#/components/schemas/MusicPlayItem'
+        playlist:
+          $ref: '#/components/schemas/Playlist'
+
+    Room:
+      type: object
+      required:
+        - id
+        - name
+        - color
+        - icon
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          examples:
+            - Living room
+        color:
+          $ref: '#/components/schemas/RoomColor'
+        icon:
+          $ref: '#/components/schemas/RoomIcon'
+
+    RoomInput:
+      type: object
+      required:
+        - name
+        - color
+        - icon
+      properties:
+        name:
+          type: string
+        color:
+          $ref: '#/components/schemas/RoomColor'
+        icon:
+          $ref: '#/components/schemas/RoomIcon'
+
+    RoomColor:
+      type: string
+      description: |
+        Room color in the app. Known values: `ikea_beige_1`, `ikea_beige_no_3`,
+        `ikea_beige_no_4`, `ikea_blue_no_52`, `ikea_blue_no_58`, `ikea_blue_no_60`,
+        `ikea_blue_no_63`, `ikea_brown_no_41`, `ikea_green_no_63`, `ikea_green_no_65`,
+        `ikea_green_no_66`, `ikea_lilac_no_3`, `ikea_orange_no_11`, `ikea_pink_no_4`,
+        `ikea_pink_no_6`, `ikea_pink_no_8`, `ikea_red_no_39`, `ikea_turquoise_5`,
+        `ikea_white_no_20`, `ikea_yellow_no_24`, `ikea_yellow_no_27`,
+        `ikea_yellow_no_28`, `ikea_yellow_no_30`, `ikea_yellow_no_31`,
+        `ncs_s_1020_r10b`, `ncs_s_4010_g10y`, `pantone_15_0522_tcx`,
+        `pantone_16_0230_tcx`, `pantone_16_0940_tcx`.
+      examples:
+        - ikea_green_no_65
+
+    RoomIcon:
+      type: string
+      description: |
+        Room icon in the app, named `rooms_*`. Known values include `rooms_arm_chair`,
+        `rooms_bathtub`, `rooms_bed`, `rooms_book_case`, `rooms_coat_hanger`,
+        `rooms_cutlery`, `rooms_desk`, `rooms_door`, `rooms_home`, `rooms_kitchen`,
+        `rooms_office_chair`, `rooms_shower`, `rooms_sofa`, `rooms_stairway`,
+        `rooms_wardrobe` and more.
+      examples:
+        - rooms_sofa
+
+    DeviceSet:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        icon:
+          $ref: '#/components/schemas/DeviceSetIcon'
+
+    DeviceSetInput:
+      type: object
+      required:
+        - name
+        - icon
+      properties:
+        name:
+          type: string
+        icon:
+          $ref: '#/components/schemas/DeviceSetIcon'
+
+    DeviceSetIcon:
+      type: string
+      description: |
+        Known values: `lighting_ached_lamp`, `lighting_chandelier`,
+        `lighting_cone_pendant`, `lighting_desk_lamp`, `lighting_electronic_circle`,
+        `lighting_fan`, `lighting_floor_lamp`, `lighting_led_strip`,
+        `lighting_nightstand_light`, `lighting_pendant_light`,
+        `lighting_spot_chandelier`, `lighting_table_lamp`, `lighting_wall_lamp`.
+
+    Scene:
+      type: object
+      required:
+        - id
+        - info
+        - type
+        - actions
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        info:
+          $ref: '#/components/schemas/SceneInfo'
+        type:
+          $ref: '#/components/schemas/SceneType'
+        triggers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SceneTrigger'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SceneAction'
+        commands:
+          type: array
+          items:
+            $ref: '#/components/schemas/SceneCommand'
+        createdAt:
+          type: string
+          format: date-time
+        lastTriggered:
+          type: string
+          format: date-time
+        lastCompleted:
+          type: string
+          format: date-time
+        lastUndo:
+          type: string
+          format: date-time
+        undoAllowedDuration:
+          type: integer
+          description: Seconds after triggering during which the scene can be undone.
+
+    SceneInput:
+      type: object
+      required:
+        - info
+        - type
+        - actions
+      properties:
+        info:
+          $ref: '#/components/schemas/SceneInfo'
+        type:
+          $ref: '#/components/schemas/SceneType'
+        triggers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SceneTrigger'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SceneAction'
+        commands:
+          type: array
+          items:
+            $ref: '#/components/schemas/SceneCommand'
+
+    SceneType:
+      type: string
+      description: |
+        Known values: `userScene` (a scene made in the app), `customScene` (an
+        automation, such as a sensor or button trigger), `wakeUpScene` and
+        `playlistScene`.
+
+    SceneInfo:
+      type: object
+      required:
+        - name
+        - icon
+      properties:
+        name:
+          type: string
+        icon:
+          type: string
+          description: Icon in the app, named `scenes_*`, such as `scenes_heart` or `scenes_moon`.
+
+    SceneTrigger:
+      type: object
+      description: |
+        What starts a scene. The shape of `trigger` depends on `type`:
+
+        * `app`: no `trigger`, started from the app or `POST /scenes/{sceneId}/trigger`.
+        * `time`: `days` and `time`.
+        * `sunriseSunset`: `days`, `type` (`sunrise` or `sunset`) and `offset`.
+        * `controller`: `controllerType`, `clickPattern`, `buttonIndex` and `deviceId`.
+        * `event`: `deviceId`, a `filter` on device attributes, `days` and optionally
+          `undo` or `notifications`.
+      required:
+        - type
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          description: 'Known values: `app`, `time`, `sunriseSunset`, `controller`, `event`, `motionSensor`, `duration`.'
+        disabled:
+          type: boolean
+        triggeredAt:
+          type: string
+          format: date-time
+        nextTriggerAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        trigger:
+          $ref: '#/components/schemas/SceneTriggerCondition'
+        endTrigger:
+          $ref: '#/components/schemas/SceneEndTrigger'
+        endTriggerEvent:
+          $ref: '#/components/schemas/SceneEndTrigger'
+
+    SceneTriggerCondition:
+      type: object
+      additionalProperties: true
+      properties:
+        days:
+          type: array
+          description: Weekdays as `Mon` to `Sun`.
+          items:
+            type: string
+        time:
+          type: string
+          description: '`HH:MM` in the hub timezone.'
+        type:
+          type: string
+          description: '`sunrise` or `sunset`.'
+        offset:
+          type: integer
+          description: Minutes relative to sunrise or sunset.
+        controllerType:
+          type: string
+          examples:
+            - shortcutController
+        clickPattern:
+          type: string
+          description: 'Known values: `singlePress`, `doublePress`, `longPress`.'
+        buttonIndex:
+          type: integer
+        deviceId:
+          type: string
+        filter:
+          type: object
+          properties:
+            attribute:
+              type: object
+              description: 'Device attributes that must match, such as `{"isOpen": true}`.'
+              additionalProperties: true
+        undo:
+          type: boolean
+          description: Undo the scene instead of running it when the filter matches.
+        notifications:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                description: 'Phone notification to send. Known values: `opened`, `closed`, `waterleak`.'
+
+    SceneEndTrigger:
+      type: object
+      required:
+        - type
+        - trigger
+      properties:
+        type:
+          type: string
+          description: 'Known values: `duration`, `time`, `sunriseSunset`.'
+        trigger:
+          type: object
+          properties:
+            duration:
+              type: integer
+              description: Seconds.
+            time:
+              type: string
+            type:
+              type: string
+              description: '`sunrise` or `sunset`.'
+            offset:
+              type: integer
+        nextTriggerAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+
+    SceneAction:
+      type: object
+      required:
+        - type
+        - attributes
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          description: 'Known values: `device`, `deviceSet`.'
+        enabled:
+          type: boolean
+        deviceId:
+          type: string
+        attributes:
+          $ref: '#/components/schemas/DeviceAttributesPatch'
+
+    SceneCommand:
+      type: object
+      description: Timed commands, used by wake up and automation scenes.
+      required:
+        - type
+        - commands
+      properties:
+        id:
+          type: string
+          description: Target device id.
+        type:
+          type: string
+          description: 'Known values: `device`.'
+        enabled:
+          type: boolean
+        commands:
+          type: array
+          items:
+            type: object
+            required:
+              - type
+            description: |
+              `transitionLight` fades from `startState` to `endState` over `duration`
+              seconds. `playAudioClipByName` plays a sound on a speaker.
+            properties:
+              type:
+                type: string
+                description: 'Known values: `transitionLight`, `playAudioClipByName`.'
+              duration:
+                type: integer
+              startState:
+                $ref: '#/components/schemas/LightState'
+              endState:
+                $ref: '#/components/schemas/LightState'
+              playAudioClipName:
+                type: string
+                examples:
+                  - 'ikea://notify/03_device_open'
+              volume:
+                type: integer
+
+    LightState:
+      type: object
+      properties:
+        isOn:
+          type: boolean
+        lightLevel:
+          type: integer
+        colorTemperature:
+          type: integer
+
+    User:
+      type: object
+      required:
+        - uid
+        - name
+      properties:
+        uid:
+          type: string
+        name:
+          type: string
+          description: For API clients this is the `name` sent when pairing.
+        audience:
+          type: string
+          examples:
+            - homesmart.local
+        email:
+          type: string
+        createdTimestamp:
+          type: string
+          format: date-time
+        verifiedUid:
+          type: string
+        role:
+          type: string
+          description: 'Known values: `host`, `home_member`.'
+        remoteUser:
+          type: integer
+
+    Music:
+      type: object
+      required:
+        - playlists
+        - favorites
+        - authorized
+      properties:
+        playlists:
+          type: array
+          items:
+            $ref: '#/components/schemas/Playlist'
+        favorites:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              imageURL:
+                type: string
+              type:
+                type: string
+        authorized:
+          type: boolean
+          description: Whether a music service is connected.
+
+    Playlist:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        playItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/MusicPlayItem'
+
+    MusicPlayItem:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        artist:
+          type: string
+        album:
+          type: string
+        imageURL:
+          type: string
+        duration:
+          type: integer
+          description: Milliseconds.
