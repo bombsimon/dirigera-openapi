@@ -734,12 +734,12 @@ paths:
         `"attributes" does not match any of the allowed types`. Sending the body as a
         single object instead of an array returns `500`.
 
-        This is also how a device is renamed (`customName`) and how hub settings
-        such as `coordinates` are changed, using the hub's device id. The app
-        renames the hub this way too.
+        This is also how a device is renamed (`customName`), and how the hub is
+        renamed and its settings such as `coordinates` are changed, using the hub's
+        device id.
 
         Besides `attributes`, a patch element can carry `room` to move the device
-        and `customIcon` to change its icon. The app uses both.
+        and `customIcon` to change its icon.
       x-verified: true
       x-sources:
         - lpgera/dirigera
@@ -828,7 +828,7 @@ paths:
       summary: Blink a device
       description: |
         Makes the device blink or beep for `period` seconds. Send `0` to stop. The hub
-        also accepts an empty object. The app sends `10`.
+        also accepts an empty object.
 
         Only `PUT` is routed here. A `PATCH` to this path matches the generic group
         route `/devices/{groupType}/{groupId}` instead and fails with
@@ -866,9 +866,8 @@ paths:
       operationId: updateDevicesByType
       summary: Control every device of a type
       description: |
-        The app uses this for its "all outlets" switch, with `deviceType=outlet`. It
-        hasn't been called directly against a hub, since it would switch every
-        device of the type in the home.
+        Changes every device of `deviceType` in the home, such as every outlet with
+        `deviceType=outlet`.
       x-verified: false
       x-sources:
         - dvdgeisler/DirigeraClient
@@ -904,8 +903,8 @@ paths:
         would fail on `PATCH /devices/{deviceId}`, an unknown room or an unknown group
         type all get `202`.
 
-        The app uses it with `deviceType=light` for settings as well, such as
-        `startupOnOff` for every light in a room.
+        It works for settings too, such as `startupOnOff` for every light in a room
+        with `deviceType=light`.
       x-verified: true
       x-sources:
         - lpgera/dirigera
@@ -1060,7 +1059,7 @@ paths:
       summary: Create a room
       description: |
         Only `name` is required. Without `color` the room gets `#D3D3D3`, and without
-        `icon` it gets `no_icon`. The app sends its own `id`.
+        `icon` it gets `no_icon`.
       x-verified: true
       x-sources:
         - lpgera/dirigera
@@ -1161,7 +1160,7 @@ paths:
       summary: Move devices into a room
       description: |
         Moves devices into the room. A single device can also be moved with a `room`
-        field on `PATCH /devices/{deviceId}`, and the app uses both. An unknown device
+        field on `PATCH /devices/{deviceId}`. An unknown device
         id returns `400` with `Invalid device id`. While the move is in progress, the
         device may briefly be listed without a `room`.
       x-verified: true
@@ -1349,14 +1348,12 @@ paths:
         attributes in `actions` aren't validated. An unknown `type` returns `400`
         listing the allowed values, and an empty body returns `500`.
 
-        The app sends its own `id`, and `undoAllowedDuration` (`30` for scenes, `1`
-        for sensor automations). Wake up and wind down scenes have no `actions`,
-        their fade is a `transitionLight` command.
+        Wake up and wind down scenes have no `actions`, their fade is a
+        `transitionLight` command.
 
-        The app's sensor settings are scenes too. "When opened" actions, "while
-        open" (an `undo` trigger on close), and phone notifications for a door
-        sensor are stored as `customScene`s with `event` triggers, and the app
-        updates them as the settings change.
+        Sensor automations are ordinary `customScene`s with `event` triggers: actions
+        when a door opens or closes, "while open" (an `undo` trigger on close), and
+        phone notifications.
       x-verified: true
       x-sources:
         - lpgera/dirigera
@@ -1514,8 +1511,8 @@ paths:
       operationId: updateScene
       summary: Replace a scene
       description: |
-        Replaces the whole scene. The app sends the full scene, the same body as
-        when creating it, and may give triggers new ids. A trigger that matches none
+        Replaces the whole scene, so the body is the full scene, the same as when
+        creating it. A trigger that matches none
         of the known trigger shapes returns `400` with
         `"triggers[0]" does not match any of the allowed types`. An unknown scene id
         returns `404`.
@@ -1710,8 +1707,7 @@ paths:
       operationId: updateAdaptiveProfile
       summary: Update an adaptive profile
       description: |
-        The app sends the whole profile, including `id`. An unknown id still gets
-        `202` and nothing is created.
+        An unknown id still gets `202` and nothing is created.
       x-verified: true
       x-sources:
         - IKEA Home smart app
@@ -2585,17 +2581,16 @@ components:
     DevicePatch:
       type: object
       description: |
-        Usually holds `attributes`. The app also sends elements with only `room` or
-        only `customIcon`. Unknown top level fields are ignored.
+        Holds `attributes`, or one of the other fields on its own. Unknown top level
+        fields are ignored.
       properties:
         attributes:
           $ref: "#/components/schemas/DeviceAttributesPatch"
         room:
           type: object
           description: |
-            Moves the device into this room. The app sends the whole room, but `id` is
-            what identifies it. Moving several devices at once is done with
-            `PATCH /rooms/{roomId}/devices`.
+            Moves the device into the room with this `id`. Moving several devices at
+            once is done with `PATCH /rooms/{roomId}/devices`.
           required:
             - id
           properties:
@@ -3106,8 +3101,8 @@ components:
           type: array
           description: |
             Phone notifications to send when the trigger fires. IKEA's cloud only
-            delivers the types the user has turned on, which the app keeps in a cloud
-            setting outside the hub.
+            delivers the types the user has turned on in a cloud setting outside the
+            hub.
           items:
             type: object
             properties:
@@ -3166,7 +3161,7 @@ components:
       properties:
         id:
           type: string
-          description: Target device id. The app sends this instead of `deviceId`.
+          description: Target device id.
         type:
           type: string
           description: "Known values: `device`, `deviceSet`."
@@ -3174,7 +3169,7 @@ components:
           type: boolean
         deviceId:
           type: string
-          description: Target device id, as sent by community clients.
+          description: Target device id, an alternative to `id`.
         attributes:
           $ref: "#/components/schemas/DeviceAttributesPatch"
 
@@ -3229,7 +3224,7 @@ components:
         colorTemperature:
           type: integer
           description: |
-            Kelvin. The app sends values outside a light's own range, such as `1000`
+            Kelvin. Values outside a light's own range are accepted, such as `1000`
             for the warmest setting.
 
     User:
