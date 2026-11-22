@@ -77,6 +77,12 @@ channels:
         $ref: "#/components/messages/deviceSetUpdated"
       deviceSetDeleted:
         $ref: "#/components/messages/deviceSetDeleted"
+      adaptiveProfileCreated:
+        $ref: "#/components/messages/adaptiveProfileCreated"
+      adaptiveProfileUpdated:
+        $ref: "#/components/messages/adaptiveProfileUpdated"
+      adaptiveProfileDeleted:
+        $ref: "#/components/messages/adaptiveProfileDeleted"
       musicUpdated:
         $ref: "#/components/messages/musicUpdated"
       termination:
@@ -100,7 +106,7 @@ operations:
     action: receive
     channel:
       $ref: "#/channels/events"
-    summary: Changes to devices, scenes, rooms, device sets and music.
+    summary: Changes to devices, scenes, rooms, device sets, adaptive profiles and music.
     messages:
       - $ref: "#/channels/events/messages/deviceStateChanged"
       - $ref: "#/channels/events/messages/deviceConfigurationChanged"
@@ -119,6 +125,9 @@ operations:
       - $ref: "#/channels/events/messages/deviceSetCreated"
       - $ref: "#/channels/events/messages/deviceSetUpdated"
       - $ref: "#/channels/events/messages/deviceSetDeleted"
+      - $ref: "#/channels/events/messages/adaptiveProfileCreated"
+      - $ref: "#/channels/events/messages/adaptiveProfileUpdated"
+      - $ref: "#/channels/events/messages/adaptiveProfileDeleted"
       - $ref: "#/channels/events/messages/musicUpdated"
       - $ref: "#/channels/events/messages/termination"
 
@@ -335,6 +344,25 @@ components:
                 const: deviceSetDeleted
               data:
                 $ref: "#/components/schemas/IdOnly"
+    adaptiveProfileCreated:
+      summary: An adaptive profile was created.
+      payload:
+        $ref: "#/components/schemas/AdaptiveProfileEvent"
+    adaptiveProfileUpdated:
+      summary: An adaptive profile was changed.
+      payload:
+        $ref: "#/components/schemas/AdaptiveProfileEvent"
+    adaptiveProfileDeleted:
+      summary: An adaptive profile was deleted.
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type:
+                const: adaptiveProfileDeleted
+              data:
+                $ref: "#/components/schemas/IdOnly"
     musicUpdated:
       summary: Playlists or favorites changed.
       payload:
@@ -474,3 +502,16 @@ components:
                 - deviceSetUpdated
             data:
               $ref: "openapi.yaml#/components/schemas/DeviceSet"
+
+    AdaptiveProfileEvent:
+      allOf:
+        - $ref: "#/components/schemas/Envelope"
+        - type: object
+          properties:
+            type:
+              type: string
+              enum:
+                - adaptiveProfileCreated
+                - adaptiveProfileUpdated
+            data:
+              $ref: "openapi.yaml#/components/schemas/AdaptiveProfile"

@@ -27,9 +27,14 @@ info:
       schema. Operations that haven't been called give their success status as
       `2XX`, since the exact code isn't known.
     * `x-sources`: the community projects that use the operation, as GitHub
-      `owner/repo` slugs. `x-source-repositories` at the root links each one. An
-      empty list means the route was found by probing a hub and no known client
-      uses it.
+      `owner/repo` slugs. `x-source-repositories` at the root links each one.
+      `IKEA Home smart app` means the request was seen in traffic from IKEA's own
+      app. An empty list means the route was found by probing a hub and no known
+      client uses it.
+
+    IKEA's app generates the `id` of new rooms, scenes and adaptive profiles
+    itself and sends it in the create request. The hub keeps a given id, and
+    generates one when it's left out.
 
     Real-time updates are pushed over a websocket that OpenAPI can't describe. It's
     covered by `asyncapi.yaml` in the same repository.
@@ -86,7 +91,12 @@ tags:
   - name: Scenes
     description: Scenes and automations.
   - name: Remote links
-    description: Which devices a remote or controller operates.
+    description: Which devices a remote, controller or sensor operates.
+  - name: Adaptive profiles
+    description: |
+      Schedules of light level and color temperature over the day. A light follows
+      one when its `deviceOnBehavior` points at it. They are listed in
+      `GET /home`, there is no separate list route.
   - name: Users
   - name: Music
     description: Sonos integration.
@@ -292,6 +302,7 @@ paths:
         - openhab/openhab-addons
         - rtoma/dirigera-prometheus-exporter
         - zinen/node-dirigera-promise
+        - IKEA Home smart app
       responses:
         "200":
           description: The complete home.
@@ -380,6 +391,7 @@ paths:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
+        - IKEA Home smart app
       responses:
         "200":
           description: The hub as a device.
@@ -723,7 +735,11 @@ paths:
         single object instead of an array returns `500`.
 
         This is also how a device is renamed (`customName`) and how hub settings
-        such as `coordinates` are changed, using the hub's device id.
+        such as `coordinates` are changed, using the hub's device id. The app
+        renames the hub this way too.
+
+        Besides `attributes`, a patch element can carry `room` to move the device
+        and `customIcon` to change its icon. The app uses both.
       x-verified: true
       x-sources:
         - lpgera/dirigera
@@ -736,6 +752,7 @@ paths:
         - kaliberjs/ikea-dirigera
         - 0xtosh/denkigera
         - bombsimon/dirigera-rs
+        - IKEA Home smart app
       requestBody:
         required: true
         content:
@@ -765,6 +782,18 @@ paths:
                 value:
                   - attributes:
                       customName: Desk lamp
+              icon:
+                summary: Change the icon
+                value:
+                  - customIcon: placement_door
+              room:
+                summary: Move to a room
+                value:
+                  - room:
+                      id: 2d3e4f5a-6b7c-4d8e-9f0a-1b2c3d4e5f6a
+                      name: Living room
+                      icon: rooms_sofa
+                      color: ikea_green_no_65
       responses:
         "202":
           description: Change accepted. The new state arrives as a `deviceStateChanged` event.
@@ -799,7 +828,7 @@ paths:
       summary: Blink a device
       description: |
         Makes the device blink or beep for `period` seconds. Send `0` to stop. The hub
-        also accepts an empty object.
+        also accepts an empty object. The app sends `10`.
 
         Only `PUT` is routed here. A `PATCH` to this path matches the generic group
         route `/devices/{groupType}/{groupId}` instead and fails with
@@ -810,6 +839,7 @@ paths:
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
         - uboness/homebridge-dirigera
+        - IKEA Home smart app
       requestBody:
         required: true
         content:
@@ -835,10 +865,15 @@ paths:
         - Device groups
       operationId: updateDevicesByType
       summary: Control every device of a type
+      description: |
+        The app uses this for its "all outlets" switch, with `deviceType=outlet`. It
+        hasn't been called directly against a hub, since it would switch every
+        device of the type in the home.
       x-verified: false
       x-sources:
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
+        - IKEA Home smart app
       parameters:
         - name: deviceType
           in: query
@@ -868,12 +903,16 @@ paths:
         doesn't validate the group type, the group id or the attributes. A body that
         would fail on `PATCH /devices/{deviceId}`, an unknown room or an unknown group
         type all get `202`.
+
+        The app uses it with `deviceType=light` for settings as well, such as
+        `startupOnOff` for every light in a room.
       x-verified: true
       x-sources:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
         - hagronnestad/dirigera
+        - IKEA Home smart app
       parameters:
         - $ref: "#/components/parameters/RoomId"
         - $ref: "#/components/parameters/DeviceTypeFilter"
@@ -1021,12 +1060,13 @@ paths:
       summary: Create a room
       description: |
         Only `name` is required. Without `color` the room gets `#D3D3D3`, and without
-        `icon` it gets `no_icon`.
+        `icon` it gets `no_icon`. The app sends its own `id`.
       x-verified: true
       x-sources:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
+        - IKEA Home smart app
       requestBody:
         required: true
         content:
@@ -1082,6 +1122,7 @@ paths:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
+        - IKEA Home smart app
       requestBody:
         required: true
         content:
@@ -1104,6 +1145,7 @@ paths:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
+        - IKEA Home smart app
       responses:
         "202":
           description: Room deleted. Its devices end up without a room.
@@ -1118,12 +1160,14 @@ paths:
       operationId: moveDevicesToRoom
       summary: Move devices into a room
       description: |
-        Moving a device is done on the target room, there is no room field to change on
-        a device. An unknown device id returns `400` with `Invalid device id`. While
-        the move is in progress, the device may briefly be listed without a `room`.
+        Moves devices into the room. A single device can also be moved with a `room`
+        field on `PATCH /devices/{deviceId}`, and the app uses both. An unknown device
+        id returns `400` with `Invalid device id`. While the move is in progress, the
+        device may briefly be listed without a `room`.
       x-verified: true
       x-sources:
         - lpgera/dirigera
+        - IKEA Home smart app
       requestBody:
         required: true
         content:
@@ -1304,6 +1348,15 @@ paths:
         `userScene`, and without `triggers` it gets a single `app` trigger. Device
         attributes in `actions` aren't validated. An unknown `type` returns `400`
         listing the allowed values, and an empty body returns `500`.
+
+        The app sends its own `id`, and `undoAllowedDuration` (`30` for scenes, `1`
+        for sensor automations). Wake up and wind down scenes have no `actions`,
+        their fade is a `transitionLight` command.
+
+        The app's sensor settings are scenes too. "When opened" actions, "while
+        open" (an `undo` trigger on close), and phone notifications for a door
+        sensor are stored as `customScene`s with `event` triggers, and the app
+        updates them as the settings change.
       x-verified: true
       x-sources:
         - lpgera/dirigera
@@ -1311,6 +1364,7 @@ paths:
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
         - openhab/openhab-addons
+        - IKEA Home smart app
       requestBody:
         required: true
         content:
@@ -1338,6 +1392,80 @@ paths:
                       attributes:
                         isOn: true
                         lightLevel: 20
+                  commands: []
+              wakeUp:
+                summary: Wake up on weekdays
+                value:
+                  id: 5a6b7c8d-9e0f-4a1b-9c2d-3e4f5a6b7c8e
+                  type: wakeUpScene
+                  info:
+                    name: Rise and shine
+                    icon: scenes_sun_horizon
+                  undoAllowedDuration: 30
+                  triggers:
+                    - type: time
+                      disabled: false
+                      trigger:
+                        time: "06:30"
+                        days:
+                          - Mon
+                          - Tue
+                          - Wed
+                          - Thu
+                          - Fri
+                      endTriggerEvent:
+                        type: duration
+                        trigger:
+                          duration: 3600
+                  actions: []
+                  commands:
+                    - type: device
+                      id: 7c8d9e0f-1a2b-4c3d-8e4f-5a6b7c8d9e0f_1
+                      enabled: true
+                      commands:
+                        - type: transitionLight
+                          duration: 1800
+                          startState:
+                            isOn: true
+                            lightLevel: 1
+                            colorTemperature: 2200
+                          endState:
+                            isOn: true
+                            lightLevel: 100
+                            colorTemperature: 4000
+              doorOpenTooLong:
+                summary: Notify when a door stays open for 15 minutes
+                value:
+                  type: customScene
+                  info:
+                    name: open delay scene
+                    icon: scenes_clean_sparkles
+                  undoAllowedDuration: 1
+                  triggers:
+                    - type: event
+                      disabled: false
+                      trigger:
+                        deviceId: a1b2c3d4-5e6f-4a1b-9c2d-3e4f5a6b7c8d_1
+                        filter:
+                          attribute:
+                            isOpen: true
+                        notifications:
+                          - type: openedLonger
+                        delay:
+                          type: schedule
+                          duration: 900
+                    - type: event
+                      disabled: false
+                      trigger:
+                        deviceId: a1b2c3d4-5e6f-4a1b-9c2d-3e4f5a6b7c8d_1
+                        filter:
+                          attribute:
+                            isOpen: false
+                        notifications:
+                          - type: openedLonger
+                        delay:
+                          type: cancel
+                  actions: []
                   commands: []
       responses:
         "200":
@@ -1386,13 +1514,16 @@ paths:
       operationId: updateScene
       summary: Replace a scene
       description: |
-        A trigger that matches none of the known trigger shapes returns `400` with
+        Replaces the whole scene. The app sends the full scene, the same body as
+        when creating it, and may give triggers new ids. A trigger that matches none
+        of the known trigger shapes returns `400` with
         `"triggers[0]" does not match any of the allowed types`. An unknown scene id
         returns `404`.
       x-verified: true
       x-sources:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
+        - IKEA Home smart app
       requestBody:
         required: true
         content:
@@ -1417,6 +1548,7 @@ paths:
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
         - openhab/openhab-addons
+        - IKEA Home smart app
       responses:
         "202":
           description: Scene deleted.
@@ -1440,6 +1572,7 @@ paths:
         - openhab/openhab-addons
         - sanjoyg/dirigera_platform
         - bombsimon/dirigera-rs
+        - IKEA Home smart app
       responses:
         "202":
           description: Scene triggered.
@@ -1464,6 +1597,7 @@ paths:
         - openhab/openhab-addons
         - sanjoyg/dirigera_platform
         - bombsimon/dirigera-rs
+        - IKEA Home smart app
       responses:
         "202":
           description: Scene undone.
@@ -1475,19 +1609,21 @@ paths:
       tags:
         - Remote links
       operationId: setRemoteLinkTargets
-      summary: Choose what a remote controls
+      summary: Choose what a remote or sensor controls
       description: |
-        Replaces the remote's targets. An unknown remote or target id returns `400`
-        with `Invalid device id`.
+        Replaces the targets. This covers remotes, motion sensors and each button of
+        a multi-button device, which has its own id such as `<uuid>_6`. An unknown
+        remote or target id returns `400` with `Invalid device id`.
       x-verified: true
       x-sources:
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
+        - IKEA Home smart app
       parameters:
         - name: remoteLinkId
           in: path
           required: true
-          description: Device id of the remote or controller.
+          description: Device id of the remote, controller, button or sensor.
           schema:
             type: string
       requestBody:
@@ -1511,6 +1647,101 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Identifier"
+        default:
+          $ref: "#/components/responses/Error"
+
+  /adaptive-profiles:
+    post:
+      tags:
+        - Adaptive profiles
+      operationId: createAdaptiveProfile
+      summary: Create an adaptive profile
+      description: |
+        Nothing in the body is required, so `{}` creates an empty, nameless
+        profile. An entry with an invalid `startTime` or `lightLevel` returns a bare
+        `400` with `Bad request`. The response echoes the request body, without the
+        id when none was sent. The new profile arrives as an
+        `adaptiveProfileCreated` event.
+      x-verified: true
+      x-sources:
+        - IKEA Home smart app
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdaptiveProfileInput"
+            example:
+              id: 4f5a6b7c-8d9e-4f0a-8b1c-2d3e4f5a6b7c
+              name: Evening
+              adaptiveSchedule:
+                - startTime: "00:00"
+                  lightLevel: 10
+                  colorTemperature: 1000
+                - startTime: "08:00"
+                  lightLevel: 90
+                  colorTemperature: 2700
+                - startTime: "18:00"
+                  lightLevel: 90
+                  colorTemperature: 2450
+      responses:
+        "202":
+          description: Profile accepted. The body is the request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdaptiveProfileInput"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        default:
+          $ref: "#/components/responses/Error"
+  /adaptive-profiles/{adaptiveProfileId}:
+    parameters:
+      - name: adaptiveProfileId
+        in: path
+        required: true
+        description: A UUID. Anything else returns `400` when updating.
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags:
+        - Adaptive profiles
+      operationId: updateAdaptiveProfile
+      summary: Update an adaptive profile
+      description: |
+        The app sends the whole profile, including `id`. An unknown id still gets
+        `202` and nothing is created.
+      x-verified: true
+      x-sources:
+        - IKEA Home smart app
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdaptiveProfileInput"
+      responses:
+        "202":
+          description: Profile updated. The body is an empty object.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        default:
+          $ref: "#/components/responses/Error"
+    delete:
+      tags:
+        - Adaptive profiles
+      operationId: deleteAdaptiveProfile
+      summary: Delete an adaptive profile
+      description: |
+        Any id gets `202`, also one that isn't a UUID. Lights that follow the profile
+        keep pointing at it in `deviceOnBehavior`.
+      x-verified: true
+      x-sources:
+        - IKEA Home smart app
+      responses:
+        "202":
+          description: Profile deleted.
         default:
           $ref: "#/components/responses/Error"
 
@@ -1628,6 +1859,7 @@ paths:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
+        - IKEA Home smart app
       parameters:
         - name: userId
           in: path
@@ -2352,12 +2584,33 @@ components:
 
     DevicePatch:
       type: object
-      description: Unknown top level fields are ignored.
-      required:
-        - attributes
+      description: |
+        Usually holds `attributes`. The app also sends elements with only `room` or
+        only `customIcon`. Unknown top level fields are ignored.
       properties:
         attributes:
           $ref: "#/components/schemas/DeviceAttributesPatch"
+        room:
+          type: object
+          description: |
+            Moves the device into this room. The app sends the whole room, but `id` is
+            what identifies it. Moving several devices at once is done with
+            `PATCH /rooms/{roomId}/devices`.
+          required:
+            - id
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            icon:
+              $ref: "#/components/schemas/RoomIcon"
+            color:
+              $ref: "#/components/schemas/RoomColor"
+        customIcon:
+          type: string
+          description: Icon in the app, such as `placement_door`.
         transitionTime:
           type: integer
           description: |
@@ -2424,6 +2677,11 @@ components:
           type: string
         controlMode:
           type: string
+          description: |
+            What a generic switch, or one button of it, operates. Known values:
+            `light`, `speaker`. The device lists this as `controlModeLight` and
+            `controlModeSpeaker` in `capabilities.canReceive`, but the attribute to
+            send is `controlMode`.
         sensorConfig:
           $ref: "#/components/schemas/SensorConfig"
         circadianPresets:
@@ -2452,18 +2710,22 @@ components:
 
     DeviceOnBehavior:
       type: object
-      description: What a light does when turned on.
+      description: |
+        What a light does when turned on. The hub doesn't check that `profileId`
+        exists, and deleting a profile leaves lights pointing at it.
       properties:
         behavior:
           type: string
           description: "Known values: `lastValue`, `adaptiveProfile`."
         profileId:
           type: string
-          description: Adaptive profile id, empty unless `behavior` is `adaptiveProfile`.
+          description: Adaptive profile id. Only sent when `behavior` is `adaptiveProfile`.
 
     SensorConfig:
       type: object
-      description: When a motion or occupancy sensor turns its lights on, and for how long.
+      description: |
+        When a motion or occupancy sensor turns its lights on, and for how long. A
+        patch can send any subset, the hub keeps the rest.
       properties:
         scheduleOn:
           type: boolean
@@ -2504,9 +2766,9 @@ components:
 
     AdaptiveProfile:
       type: object
+      description: The hub stores a profile without `name` if none was given.
       required:
         - id
-        - name
         - adaptiveSchedule
       properties:
         id:
@@ -2518,18 +2780,43 @@ components:
           items:
             $ref: "#/components/schemas/AdaptiveScheduleEntry"
 
+    AdaptiveProfileInput:
+      type: object
+      description: |
+        Nothing is required. Unknown fields are ignored. When updating, a missing
+        `name` keeps the current one, but a missing `adaptiveSchedule` empties the
+        schedule.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Only used when creating. Creating with an existing id replaces that profile.
+        name:
+          type: string
+        adaptiveSchedule:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdaptiveScheduleEntry"
+
     AdaptiveScheduleEntry:
       type: object
+      description: The light holds these values from `startTime` until the next entry.
       required:
         - startTime
       properties:
         startTime:
           type: string
-          description: "`HH:MM`."
+          pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+          description: "`HH:MM`, with a two digit hour."
         lightLevel:
           type: integer
+          minimum: 1
+          maximum: 100
         colorTemperature:
           type: integer
+          description: |
+            Kelvin. Not range checked. The default profile uses values from `1000`
+            to `8000`, beyond what lights support.
 
     PlaybackAudio:
       type: object
@@ -2571,6 +2858,10 @@ components:
       required:
         - name
       properties:
+        id:
+          type: string
+          format: uuid
+          description: Only used when creating. The hub generates one when it's left out.
         name:
           type: string
           minLength: 1
@@ -2688,8 +2979,15 @@ components:
       required:
         - info
       properties:
+        id:
+          type: string
+          format: uuid
+          description: Only used when creating. The hub generates one when it's left out.
         info:
           $ref: "#/components/schemas/SceneInfo"
+        undoAllowedDuration:
+          type: integer
+          description: Seconds after triggering during which the scene can be undone.
         type:
           $ref: "#/components/schemas/SceneType"
         triggers:
@@ -2734,8 +3032,12 @@ components:
         * `time`: `days` and `time`.
         * `sunriseSunset`: `days`, `type` (`sunrise` or `sunset`) and `offset`.
         * `controller`: `controllerType`, `clickPattern`, `buttonIndex` and `deviceId`.
-        * `event`: `deviceId`, a `filter` on device attributes, `days` and optionally
-          `undo` or `notifications`.
+        * `event`: `deviceId` and a `filter` on device attributes. Optionally
+          `days` (the hub fills in every day when it's left out), `undo`,
+          `notifications` and `delay`.
+
+        Any trigger can have an `endTriggerEvent`, which ends the scene after a
+        `duration` or at a `time`.
       required:
         - type
       properties:
@@ -2802,12 +3104,31 @@ components:
           description: Undo the scene instead of running it when the filter matches.
         notifications:
           type: array
+          description: |
+            Phone notifications to send when the trigger fires. IKEA's cloud only
+            delivers the types the user has turned on, which the app keeps in a cloud
+            setting outside the hub.
           items:
             type: object
             properties:
               type:
                 type: string
-                description: "Phone notification to send. Known values: `opened`, `closed`, `waterleak`."
+                description: "Known values: `opened`, `closed`, `openedLonger`, `waterleak`."
+        delay:
+          type: object
+          description: |
+            Waits before the trigger fires. `schedule` starts a timer of `duration`
+            seconds, and a second trigger with `cancel` stops it, which gives "still
+            open after 15 minutes".
+          required:
+            - type
+          properties:
+            type:
+              type: string
+              description: "Known values: `schedule`, `cancel`."
+            duration:
+              type: integer
+              description: Seconds, for `schedule`.
 
     SceneEndTrigger:
       type: object
@@ -2845,6 +3166,7 @@ components:
       properties:
         id:
           type: string
+          description: Target device id. The app sends this instead of `deviceId`.
         type:
           type: string
           description: "Known values: `device`, `deviceSet`."
@@ -2852,6 +3174,7 @@ components:
           type: boolean
         deviceId:
           type: string
+          description: Target device id, as sent by community clients.
         attributes:
           $ref: "#/components/schemas/DeviceAttributesPatch"
 
@@ -2905,6 +3228,9 @@ components:
           type: integer
         colorTemperature:
           type: integer
+          description: |
+            Kelvin. The app sends values outside a light's own range, such as `1000`
+            for the warmest setting.
 
     User:
       type: object

@@ -14,23 +14,26 @@ implementation.
 > and testing against a real hub, and firmware updates may change it. This
 > project isn't affiliated with IKEA.
 
-- [`openapi.yaml`] describes the REST API with 52 operations over devices,
-  rooms, scenes, device sets, users, music, the hub and pairing.
-- [`asyncapi.yaml`] describes the websocket with ping and pong plus 19 event
-  types for changes to devices, scenes, rooms, device sets and music.
+- [`openapi.yaml`] describes the REST API with 55 operations over devices,
+  rooms, scenes, device sets, adaptive profiles, users, music, the hub and
+  pairing.
+- [`asyncapi.yaml`] describes the websocket with ping and pong plus 22 event
+  types for changes to devices, scenes, rooms, device sets, adaptive profiles and
+  music.
 
 ## How much to trust it
 
 Every operation has two extensions:
 
 - `x-verified: true` means the operation was called against a real hub
-  (firmware 2.975.4) and the response matched the schema. This covers 45
+  (firmware 2.975.4) and the response matched the schema. This covers 48
   operations: every read, plus device and group control, rooms, device sets,
-  scenes, remote links, users, pairing and firmware updates.
+  scenes, adaptive profiles, remote links, users, pairing and firmware updates.
 - `x-sources` lists the community projects that use the operation, as GitHub
   `owner/repo` slugs. They're linked under [Sources] and in
-  `x-source-repositories` at the top of the spec. An empty list means the route
-  was found by probing a hub and no known client uses it.
+  `x-source-repositories` at the top of the spec. `IKEA Home smart app` means
+  the request was seen in traffic from IKEA's own app. An empty list means the
+  route was found by probing a hub and no known client uses it.
 
 The seven unverified operations either can't be tried safely on a hub that's in
 use (changing the Thread network, the cloud connection, music service tokens,
