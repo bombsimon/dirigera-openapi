@@ -1,8 +1,12 @@
 // Redoc doesn't render vendor extensions on operations, so surface them in the description.
 // https://redocly.com/docs/cli/custom-plugins/custom-decorators
-function describeVerification(isVerified) {
+function describeVerification(isVerified, hasSources) {
   if (isVerified) {
     return "✅ <strong>Verified</strong> against a real hub";
+  }
+
+  if (!hasSources) {
+    return "⚠️ <strong>Unverified</strong>, the route was found on a real hub but the request hasn't been tried";
   }
 
   return "⚠️ <strong>Unverified</strong>, described from community sources only";
@@ -23,10 +27,13 @@ function describeSources(sourceSlugs, sourceRepositories) {
 
 // A collapsed <details> keeps the status on one line with sources a click away.
 function describeOperationMetadata(operation, sourceRepositories) {
-  const summary = describeVerification(operation["x-verified"] === true);
   const sourceSlugs = Array.isArray(operation["x-sources"])
     ? operation["x-sources"]
     : [];
+  const summary = describeVerification(
+    operation["x-verified"] === true,
+    sourceSlugs.length > 0,
+  );
 
   if (sourceSlugs.length === 0) {
     return summary;

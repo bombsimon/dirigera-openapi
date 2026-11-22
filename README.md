@@ -14,7 +14,7 @@ implementation.
 > and testing against a real hub, and firmware updates may change it. This
 > project isn't affiliated with IKEA.
 
-- [`openapi.yaml`] describes the REST API with 43 operations over devices,
+- [`openapi.yaml`] describes the REST API with 52 operations over devices,
   rooms, scenes, device sets, users, music, the hub and pairing.
 - [`asyncapi.yaml`] describes the websocket with ping and pong plus 19 event
   types for changes to devices, scenes, rooms, device sets and music.
@@ -24,15 +24,23 @@ implementation.
 Every operation has two extensions:
 
 - `x-verified: true` means the operation was called against a real hub
-  (firmware 2.975.4) and the response matched the schema. This covers 12
-  operations, all of them reads plus the first pairing step.
+  (firmware 2.975.4) and the response matched the schema. This covers 45
+  operations: every read, plus device and group control, rooms, device sets,
+  scenes, remote links, users, pairing and firmware updates.
 - `x-sources` lists the community projects that use the operation, as GitHub
   `owner/repo` slugs. They're linked under [Sources] and in
-  `x-source-repositories` at the top of the spec.
+  `x-source-repositories` at the top of the spec. An empty list means the route
+  was found by probing a hub and no known client uses it.
 
-Operations that change state are described from the sources but haven't been
-verified yet. Their success status is written as `2XX` because the exact code
-isn't known. Corrections from people who have tried them are very welcome.
+The seven unverified operations either can't be tried safely on a hub that's in
+use (changing the Thread network, the cloud connection, music service tokens,
+or every device of a type), need hardware this hub doesn't have (speakers), or
+don't exist on current firmware. Their success status is written as `2XX`
+because the exact code isn't known. Corrections from people who have tried them
+are very welcome.
+
+Most writes answer `202 Accepted` before the change has happened, so read the
+new state from the websocket rather than straight after the request.
 
 Fields where IKEA keeps adding values, such as device types, capabilities and
 icons, are plain strings with the known values listed in the description. A
@@ -41,8 +49,8 @@ soon as you pair a new kind of device.
 
 ## Using the API
 
-The hub listens on port 8443 with a self-signed certificate, so turn off
-certificate verification or pin the certificate. All paths are under
+The hub listens on port 8443 with a certificate signed by IKEA's own private CA,
+so turn off certificate verification or pin the certificate. All paths are under
 `https://<hub-ip>:8443/v1`.
 
 ### Pairing
@@ -73,7 +81,7 @@ curl -sk "https://$HUB:8443/v1/oauth/token" \
   --data-urlencode "grant_type=authorization_code" | jq -r .access_token
 ```
 
-The token doesn't expire. Send it as `Authorization: Bearer <token>`.
+The token is valid for ten years. Send it as `Authorization: Bearer <token>`.
 
 ### Examples
 

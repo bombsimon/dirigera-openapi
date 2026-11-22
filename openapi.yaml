@@ -8,17 +8,28 @@ info:
     doesn't document it, so this specification is assembled from community clients
     and checked against a real hub. See the README for every source.
 
-    The hub uses a self-signed certificate, so clients must disable certificate
-    verification or pin the hub certificate.
+    The hub certificate is signed by IKEA's private "IKEA Home smart Root CA",
+    which no system trusts, so clients must disable certificate verification or pin
+    the hub certificate.
+
+    Most writes are applied asynchronously. The hub answers `202 Accepted` before
+    the change has happened, so a read straight afterwards can still return the old
+    value. Wait for the matching websocket event instead.
+
+    Request bodies are validated, and a failed validation returns `400` with a
+    message such as `"name" is required`. A body that doesn't match what the server
+    expects in other ways often returns `500` with `Something went wrong`.
 
     Every operation carries two vendor extensions:
 
-    * `x-verified`: `true` when the operation was called against a real hub while
-      writing this spec and its response matched the schema. Operations that change
-      state haven't been verified yet, and their success status is given as `2XX`
-      since the exact code isn't known.
+    * `x-verified`: `true` when the operation was called against a real hub
+      (firmware 2.975.4) while writing this spec and its response matched the
+      schema. Operations that haven't been called give their success status as
+      `2XX`, since the exact code isn't known.
     * `x-sources`: the community projects that use the operation, as GitHub
-      `owner/repo` slugs. `x-source-repositories` at the root links each one.
+      `owner/repo` slugs. `x-source-repositories` at the root links each one. An
+      empty list means the route was found by probing a hub and no known client
+      uses it.
 
     Real-time updates are pushed over a websocket that OpenAPI can't describe. It's
     covered by `asyncapi.yaml` in the same repository.
@@ -136,16 +147,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthorizationCode"
+        "409":
+          description: |
+            Another pairing is already pending, with the error
+            `Already one ongoing pairing request`. A pending code expires after
+            about 60 seconds.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         default:
           $ref: "#/components/responses/Error"
-    post:
+    delete:
       tags:
         - Authentication
       operationId: cancelAuthorization
       summary: Cancel pairing
-      description: Cancels a pending authorization started with `GET /oauth/authorize`.
+      description: |
+        Cancels a pending authorization started with `GET /oauth/authorize`.
+
+        The hub routes this as `DELETE`, not `POST` as some clients send it. The body
+        must be form encoded. Without it, or with the same fields as JSON or query
+        parameters, the hub answers `400` with the message `[object Object]`. After
+        cancelling, `POST /oauth/token` with the code returns `401`.
       security: []
-      x-verified: false
+      x-verified: true
       x-sources:
         - dvdgeisler/DirigeraClient
       requestBody:
@@ -163,7 +189,7 @@ paths:
                 code_verifier:
                   type: string
       responses:
-        "2XX":
+        "202":
           description: Authorization cancelled.
         default:
           $ref: "#/components/responses/Error"
@@ -173,7 +199,10 @@ paths:
         - Authentication
       operationId: getAuthorizationStatus
       summary: Poll an authorization transaction
-      description: The response format isn't known yet.
+      description: |
+        The response format isn't known yet, and neither is where the transaction id
+        comes from. It's not the pairing code: passing that returns `401` with
+        `Invalid transaction id`. Unlike the rest of pairing, this needs a token.
       x-verified: false
       x-sources:
         - dvdgeisler/DirigeraClient
@@ -203,9 +232,21 @@ paths:
       description: |
         Second step of pairing. The hub answers with an error until the action button
         on the hub has been pressed, so clients usually retry every second for up to 60
-        seconds. The returned token doesn't expire.
+        seconds.
+
+        The token is an ES256 JWT whose `exp` claim is ten years after it was issued,
+        so in practice it doesn't expire. A request without a valid body returns
+        `500`, not `400`.
+
+        Errors from this operation only have an `error` field, which holds the
+        message:
+
+        * `403` `Button not pressed or presence time stamp timed out.` until the
+          button is pressed.
+        * `403` `Pairing request timed out` once the code is about 60 seconds old.
+        * `401` `Invalid authorization code` for an expired or cancelled code.
       security: []
-      x-verified: false
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - Leggin/dirigera
@@ -224,7 +265,7 @@ paths:
             schema:
               $ref: "#/components/schemas/TokenRequest"
       responses:
-        "2XX":
+        "200":
           description: Bearer token to use for every other request.
           content:
             application/json:
@@ -261,12 +302,79 @@ paths:
         default:
           $ref: "#/components/responses/Error"
 
+  /health:
+    get:
+      tags:
+        - Hub
+      operationId: getHealth
+      summary: Check that the API is up
+      description: Needs no token.
+      security: []
+      x-verified: true
+      x-sources: []
+      responses:
+        "200":
+          description: The API is running.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                properties:
+                  status:
+                    type: string
+                    examples:
+                      - OK
+        default:
+          $ref: "#/components/responses/Error"
+  /config:
+    get:
+      tags:
+        - Hub
+      operationId: getConfig
+      summary: Get the IKEA cloud endpoints
+      description: |
+        The hostnames the hub and the app use to reach the IKEA cloud for remote
+        access.
+      x-verified: true
+      x-sources: []
+      responses:
+        "200":
+          description: Cloud endpoints for the hub's region.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  remoteApiEndpoint:
+                    type: string
+                    examples:
+                      - remote.eu-central-1.api.homesmart.ikea.com
+                  remoteWsEndpoint:
+                    type: string
+                    examples:
+                      - wss.eu-central-1.api.homesmart.ikea.com
+                  remoteTokenEndpoint:
+                    type: string
+                    examples:
+                      - auth.eu-central-1.api.homesmart.ikea.com
+        default:
+          $ref: "#/components/responses/Error"
+
   /hub/status:
     get:
       tags:
         - Hub
       operationId: getHubStatus
       summary: Get the hub
+      description: |
+        Works without a token too. The hub then answers `206` with only its name, its
+        firmware version and the API version, which is enough to identify a hub before
+        pairing.
+      security:
+        - bearerAuth: []
+        - {}
       x-verified: true
       x-sources:
         - lpgera/dirigera
@@ -279,6 +387,155 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Hub"
+        "206":
+          description: Sent instead of `200` when the request has no token.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - attributes
+                  - apiVersion
+                properties:
+                  attributes:
+                    type: object
+                    properties:
+                      customName:
+                        type: string
+                      firmwareVersion:
+                        type: string
+                        examples:
+                          - 2.975.4
+                  apiVersion:
+                    type: string
+                    examples:
+                      - 1.6.7
+        default:
+          $ref: "#/components/responses/Error"
+  /hub/thread:
+    get:
+      tags:
+        - Hub
+      operationId: getThreadNetwork
+      summary: Get the Thread network
+      description: |
+        State of the hub's Thread border router.
+
+        `operationalDataSet` is the Thread active operational dataset, which includes
+        the network key. Treat it as a secret.
+      x-verified: true
+      x-sources: []
+      responses:
+        "200":
+          description: Thread border router state.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  borderAgentID:
+                    type: string
+                  operationalDataSet:
+                    type: string
+                    description: Active operational dataset as hex encoded TLVs.
+                  extendedAddress:
+                    type: string
+                  configured:
+                    type: boolean
+                  threadState:
+                    type: string
+                    description: "Known values: `threadConnected`."
+                  threadJoiningState:
+                    type: string
+                    description: "Known values: `idle`."
+                  nat64Enabled:
+                    type: boolean
+        default:
+          $ref: "#/components/responses/Error"
+    put:
+      tags:
+        - Hub
+      operationId: setThreadNetwork
+      summary: Change the Thread network
+      description: |
+        The route exists, but the request body isn't known yet. It presumably takes an
+        operational dataset to join or form a network.
+      x-verified: false
+      x-sources: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "2XX":
+          description: Change accepted.
+        default:
+          $ref: "#/components/responses/Error"
+  /hub/homekit:
+    get:
+      tags:
+        - Hub
+      operationId: getHomeKitIntegration
+      summary: Get the HomeKit integration
+      description: |
+        Whether the hub is paired with Apple Home. The HomeKit accessory server itself
+        listens on port 8000.
+      x-verified: true
+      x-sources: []
+      responses:
+        "200":
+          description: HomeKit pairing state.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  integrationPaired:
+                    type: boolean
+                  integrationPairingAllowed:
+                    type: boolean
+        default:
+          $ref: "#/components/responses/Error"
+  /hub/ota/schedule:
+    get:
+      tags:
+        - Hub
+      operationId: getFirmwareUpdateSchedule
+      summary: Get the automatic update schedule
+      x-verified: true
+      x-sources: []
+      responses:
+        "200":
+          description: When the hub installs updates on its own.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FirmwareUpdateSchedule"
+        default:
+          $ref: "#/components/responses/Error"
+    put:
+      tags:
+        - Hub
+      operationId: setFirmwareUpdateSchedule
+      summary: Change the automatic update schedule
+      description: |
+        Takes the same shape as the `GET` response. `time` must be a valid 24 hour
+        `HH:mm`, otherwise the hub answers `400` with
+        `The field 'time' needs to have format HH:mm`. `enabled` isn't type checked.
+      x-verified: true
+      x-sources: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FirmwareUpdateSchedule"
+      responses:
+        "202":
+          description: Schedule changed.
         default:
           $ref: "#/components/responses/Error"
   /hub/ota/check:
@@ -287,13 +544,13 @@ paths:
         - Hub
       operationId: checkFirmwareUpdate
       summary: Check for firmware updates
-      x-verified: false
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
       responses:
-        "2XX":
+        "202":
           description: Check started. Progress shows up in the hub's `ota*` attributes.
         default:
           $ref: "#/components/responses/Error"
@@ -303,13 +560,14 @@ paths:
         - Hub
       operationId: installFirmwareUpdate
       summary: Install a downloaded firmware update
-      x-verified: false
+      description: Also answers `202` when no update is waiting, and then does nothing.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
       responses:
-        "2XX":
+        "202":
           description: Update started.
         default:
           $ref: "#/components/responses/Error"
@@ -319,7 +577,12 @@ paths:
         - Hub
       operationId: setFirmwareEnvironment
       summary: Switch firmware channel
-      description: Moves the hub to another firmware channel. Pre-release channels may be unstable.
+      description: |
+        Moves the hub to another firmware channel. Pre-release channels may be unstable.
+
+        This route doesn't exist on firmware 2.975.4, which answers `404`. It's kept for
+        hubs on older firmware.
+      deprecated: true
       x-verified: false
       x-sources:
         - dvdgeisler/DirigeraClient
@@ -427,8 +690,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Device"
+        "400":
+          description: |
+            The id isn't a valid device id, such as one without the `_1` suffix. The
+            message is `invalid device id: <id>`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
-          $ref: "#/components/responses/NotFound"
+          description: The id is valid but no device has it. The message is `Something went wrong`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         default:
           $ref: "#/components/responses/Error"
     patch:
@@ -437,13 +712,19 @@ paths:
       operationId: updateDevice
       summary: Control or configure a device
       description: |
-        Changes one or more attributes. The body is an array of patches, and every
-        client sends a single element. Only attributes listed in the device's
-        `capabilities.canReceive` can be changed.
+        Changes one or more attributes. The body is an array of patches. Every client
+        sends a single element, but the hub accepts several, and an empty array. Only
+        attributes listed in the device's `capabilities.canReceive` can be changed.
+
+        `attributes` is validated against a set of allowed shapes. An unknown
+        attribute, a wrong type or a value out of range (such as `lightLevel` of `0`,
+        `101` or `71.5`) all return `400` with
+        `"attributes" does not match any of the allowed types`. Sending the body as a
+        single object instead of an array returns `500`.
 
         This is also how a device is renamed (`customName`) and how hub settings
         such as `coordinates` are changed, using the hub's device id.
-      x-verified: false
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - Leggin/dirigera
@@ -485,7 +766,7 @@ paths:
                   - attributes:
                       customName: Desk lamp
       responses:
-        "2XX":
+        "202":
           description: Change accepted. The new state arrives as a `deviceStateChanged` event.
         "400":
           $ref: "#/components/responses/BadRequest"
@@ -496,13 +777,15 @@ paths:
         - Devices
       operationId: deleteDevice
       summary: Remove a device
-      description: Unpairs the device from the hub.
-      x-verified: false
+      description: |
+        Unpairs the device from the hub. It has to be paired again to come back. An
+        id that isn't a valid device id returns `400`, and an unknown one `404`.
+      x-verified: true
       x-sources:
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
       responses:
-        "2XX":
+        "202":
           description: Device removed.
         default:
           $ref: "#/components/responses/Error"
@@ -514,8 +797,14 @@ paths:
         - Devices
       operationId: identifyDevice
       summary: Blink a device
-      description: Makes the device blink or beep for `period` seconds. Send `0` to stop.
-      x-verified: false
+      description: |
+        Makes the device blink or beep for `period` seconds. Send `0` to stop. The hub
+        also accepts an empty object.
+
+        Only `PUT` is routed here. A `PATCH` to this path matches the generic group
+        route `/devices/{groupType}/{groupId}` instead and fails with
+        `"groupId" must be a valid GUID`.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
@@ -527,8 +816,6 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - period
               properties:
                 period:
                   type: integer
@@ -537,7 +824,7 @@ paths:
                   examples:
                     - 30
       responses:
-        "2XX":
+        "202":
           description: Identification started or stopped.
         default:
           $ref: "#/components/responses/Error"
@@ -576,7 +863,12 @@ paths:
         - Device groups
       operationId: updateDevicesInRoom
       summary: Control every device in a room
-      x-verified: false
+      description: |
+        The hub routes this as a generic `/devices/{groupType}/{groupId}`, and it
+        doesn't validate the group type, the group id or the attributes. A body that
+        would fail on `PATCH /devices/{deviceId}`, an unknown room or an unknown group
+        type all get `202`.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
@@ -592,7 +884,7 @@ paths:
             schema:
               $ref: "#/components/schemas/DevicePatchList"
       responses:
-        "2XX":
+        "202":
           description: Change accepted.
         default:
           $ref: "#/components/responses/Error"
@@ -602,7 +894,8 @@ paths:
         - Device groups
       operationId: updateDevicesInSet
       summary: Control every device in a device set
-      x-verified: false
+      description: Like the room variant, nothing in the request is validated and the answer is always `202`.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
@@ -619,7 +912,7 @@ paths:
             schema:
               $ref: "#/components/schemas/DevicePatchList"
       responses:
-        "2XX":
+        "202":
           description: Change accepted.
         default:
           $ref: "#/components/responses/Error"
@@ -657,8 +950,11 @@ paths:
         - Device groups
       operationId: stepLightLevel
       summary: Step the light level up or down
-      description: Relative dimming, as done by holding a button on a remote.
-      x-verified: false
+      description: |
+        Relative dimming, as done by holding a button on a remote. Verified with a
+        device, a room and a device set as the target. A body without `type` and
+        `stepSize` returns `400` with `Non valid request`.
+      x-verified: true
       x-sources:
         - dvdgeisler/DirigeraClient
       parameters:
@@ -689,7 +985,7 @@ paths:
                   type: integer
                   description: Transition time in milliseconds.
       responses:
-        "2XX":
+        "202":
           description: Step accepted.
         default:
           $ref: "#/components/responses/Error"
@@ -723,7 +1019,10 @@ paths:
         - Rooms
       operationId: createRoom
       summary: Create a room
-      x-verified: false
+      description: |
+        Only `name` is required. Without `color` the room gets `#D3D3D3`, and without
+        `icon` it gets `no_icon`.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
@@ -735,7 +1034,7 @@ paths:
             schema:
               $ref: "#/components/schemas/RoomInput"
       responses:
-        "2XX":
+        "202":
           description: Room created.
           content:
             application/json:
@@ -763,7 +1062,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/Room"
         "404":
-          $ref: "#/components/responses/NotFound"
+          description: No room has this id. The message is `Tag not found`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         default:
           $ref: "#/components/responses/Error"
     put:
@@ -771,8 +1074,10 @@ paths:
         - Rooms
       operationId: updateRoom
       summary: Rename or restyle a room
-      description: Replaces name, icon and color, so send all three.
-      x-verified: false
+      description: |
+        Only `name` is required. Fields that are left out keep their current value.
+        An unknown room id still gets `202`.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
@@ -784,7 +1089,7 @@ paths:
             schema:
               $ref: "#/components/schemas/RoomInput"
       responses:
-        "2XX":
+        "202":
           description: Room updated.
         default:
           $ref: "#/components/responses/Error"
@@ -793,13 +1098,14 @@ paths:
         - Rooms
       operationId: deleteRoom
       summary: Delete a room
-      x-verified: false
+      description: An unknown room id still gets `202`.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
       responses:
-        "2XX":
+        "202":
           description: Room deleted. Its devices end up without a room.
         default:
           $ref: "#/components/responses/Error"
@@ -811,8 +1117,11 @@ paths:
         - Rooms
       operationId: moveDevicesToRoom
       summary: Move devices into a room
-      description: Moving a device is done on the target room, there is no room field to change on a device.
-      x-verified: false
+      description: |
+        Moving a device is done on the target room, there is no room field to change on
+        a device. An unknown device id returns `400` with `Invalid device id`. While
+        the move is in progress, the device may briefly be listed without a `room`.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
       requestBody:
@@ -829,7 +1138,7 @@ paths:
                   items:
                     type: string
       responses:
-        "2XX":
+        "202":
           description: Devices moved.
         default:
           $ref: "#/components/responses/Error"
@@ -840,8 +1149,10 @@ paths:
         - Device sets
       operationId: createDeviceSet
       summary: Create a device set
-      description: Device sets are listed through `GET /home`, there is no list endpoint.
-      x-verified: false
+      description: |
+        Device sets are listed through `GET /home`, there is no list endpoint. Only
+        `name` is required, and without `icon` the set gets `no_icon`.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
@@ -853,7 +1164,7 @@ paths:
             schema:
               $ref: "#/components/schemas/DeviceSetInput"
       responses:
-        "2XX":
+        "201":
           description: Device set created.
           content:
             application/json:
@@ -869,7 +1180,8 @@ paths:
         - Device sets
       operationId: updateDeviceSet
       summary: Rename a device set
-      x-verified: false
+      description: An unknown device set id still gets `202`.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
@@ -881,8 +1193,12 @@ paths:
             schema:
               $ref: "#/components/schemas/DeviceSetInput"
       responses:
-        "2XX":
+        "202":
           description: Device set updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Identifier"
         default:
           $ref: "#/components/responses/Error"
     delete:
@@ -890,14 +1206,19 @@ paths:
         - Device sets
       operationId: deleteDeviceSet
       summary: Delete a device set
-      x-verified: false
+      description: An unknown device set id still gets `202`.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
       responses:
-        "2XX":
+        "202":
           description: Device set deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Identifier"
         default:
           $ref: "#/components/responses/Error"
   /device-set/{deviceSetId}/configuration:
@@ -908,7 +1229,11 @@ paths:
         - Device sets
       operationId: configureDeviceSet
       summary: Choose the devices in a device set
-      x-verified: false
+      description: |
+        Replaces the members of the set. Send an empty `deviceIds` to empty it. An
+        unknown device id returns `400` with `Invalid device id`, and a body without
+        `deviceIds` returns `500`.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
       requestBody:
@@ -926,14 +1251,19 @@ paths:
                     type: string
                 roomId:
                   type: string
+                  description: Also moves every device in `deviceIds` into this room.
                 remoteLinkIds:
                   type: array
                   description: Remotes that should control the set.
                   items:
                     type: string
       responses:
-        "2XX":
+        "202":
           description: Configuration updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Identifier"
         default:
           $ref: "#/components/responses/Error"
 
@@ -969,7 +1299,12 @@ paths:
         - Scenes
       operationId: createScene
       summary: Create a scene
-      x-verified: false
+      description: |
+        Only `info` is strictly needed. Without `type` the scene becomes a
+        `userScene`, and without `triggers` it gets a single `app` trigger. Device
+        attributes in `actions` aren't validated. An unknown `type` returns `400`
+        listing the allowed values, and an empty body returns `500`.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - Leggin/dirigera
@@ -1005,7 +1340,7 @@ paths:
                         lightLevel: 20
                   commands: []
       responses:
-        "2XX":
+        "200":
           description: Scene created.
           content:
             application/json:
@@ -1038,7 +1373,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/Scene"
         "404":
-          $ref: "#/components/responses/NotFound"
+          description: No scene has this id. The message is `Something went wrong`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         default:
           $ref: "#/components/responses/Error"
     put:
@@ -1046,7 +1385,11 @@ paths:
         - Scenes
       operationId: updateScene
       summary: Replace a scene
-      x-verified: false
+      description: |
+        A trigger that matches none of the known trigger shapes returns `400` with
+        `"triggers[0]" does not match any of the allowed types`. An unknown scene id
+        returns `404`.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
@@ -1057,7 +1400,7 @@ paths:
             schema:
               $ref: "#/components/schemas/SceneInput"
       responses:
-        "2XX":
+        "202":
           description: Scene updated.
         default:
           $ref: "#/components/responses/Error"
@@ -1066,7 +1409,8 @@ paths:
         - Scenes
       operationId: deleteScene
       summary: Delete a scene
-      x-verified: false
+      description: An unknown scene id still gets `202`.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - Leggin/dirigera
@@ -1074,7 +1418,7 @@ paths:
         - thembo-sec/dirigera_client
         - openhab/openhab-addons
       responses:
-        "2XX":
+        "202":
           description: Scene deleted.
         default:
           $ref: "#/components/responses/Error"
@@ -1086,7 +1430,8 @@ paths:
         - Scenes
       operationId: triggerScene
       summary: Run a scene now
-      x-verified: false
+      description: An unknown scene id still gets `202`.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - Leggin/dirigera
@@ -1096,7 +1441,7 @@ paths:
         - sanjoyg/dirigera_platform
         - bombsimon/dirigera-rs
       responses:
-        "2XX":
+        "202":
           description: Scene triggered.
         default:
           $ref: "#/components/responses/Error"
@@ -1108,8 +1453,11 @@ paths:
         - Scenes
       operationId: undoScene
       summary: Undo a scene
-      description: Reverts the last run, allowed within `undoAllowedDuration` seconds of triggering.
-      x-verified: false
+      description: |
+        Reverts the last run, allowed within `undoAllowedDuration` seconds of
+        triggering. The hub answers `202` even when there is nothing to undo or the
+        scene doesn't exist.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - Leggin/dirigera
@@ -1117,7 +1465,7 @@ paths:
         - sanjoyg/dirigera_platform
         - bombsimon/dirigera-rs
       responses:
-        "2XX":
+        "202":
           description: Scene undone.
         default:
           $ref: "#/components/responses/Error"
@@ -1128,7 +1476,10 @@ paths:
         - Remote links
       operationId: setRemoteLinkTargets
       summary: Choose what a remote controls
-      x-verified: false
+      description: |
+        Replaces the remote's targets. An unknown remote or target id returns `400`
+        with `Invalid device id`.
+      x-verified: true
       x-sources:
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
@@ -1154,8 +1505,12 @@ paths:
                   items:
                     type: string
       responses:
-        "2XX":
+        "202":
           description: Targets updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Identifier"
         default:
           $ref: "#/components/responses/Error"
 
@@ -1210,7 +1565,8 @@ paths:
         - Users
       operationId: renameCurrentUser
       summary: Rename the current user
-      x-verified: false
+      description: An empty name returns `400`, and a body without `name` returns `500`.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
@@ -1226,18 +1582,48 @@ paths:
                 name:
                   type: string
       responses:
-        "2XX":
+        "200":
           description: User renamed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
         default:
           $ref: "#/components/responses/Error"
   /users/{userId}:
+    get:
+      tags:
+        - Users
+      operationId: getUser
+      summary: Get a user
+      description: An unknown user id returns `500`.
+      x-verified: true
+      x-sources: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The `uid` of the user.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        default:
+          $ref: "#/components/responses/Error"
     delete:
       tags:
         - Users
       operationId: deleteUser
       summary: Remove a user
-      description: Revokes the user's access, which also invalidates tokens created for it.
-      x-verified: false
+      description: |
+        Revokes the user's access. Its token stops working straight away, with `403`
+        and `Provided user id not found in system`.
+      x-verified: true
       x-sources:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
@@ -1250,8 +1636,23 @@ paths:
           schema:
             type: string
       responses:
-        "2XX":
+        "200":
           description: User removed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    examples:
+                      - Resource 2a3b4c5d-6e7f-4a8b-9c0d-1e2f3a4b5c6d removed
+        "404":
+          description: No user has this id. `error` is `DeleteUser`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         default:
           $ref: "#/components/responses/Error"
 
@@ -1274,6 +1675,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Music"
+        default:
+          $ref: "#/components/responses/Error"
+  /music/tokens:
+    post:
+      tags:
+        - Music
+      operationId: createMusicTokens
+      summary: Hand music service tokens to the hub
+      description: |
+        The body and purpose aren't known yet. It's presumably how the app passes
+        Sonos or streaming service credentials to the hub. An empty object returns
+        `400` with only `Bad request`, so the validation error gives nothing away.
+      x-verified: false
+      x-sources: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "2XX":
+          description: Tokens accepted.
         default:
           $ref: "#/components/responses/Error"
 
@@ -1331,12 +1756,6 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
-    NotFound:
-      description: No such resource.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/Error"
     BadRequest:
       description: The request body or an id was invalid.
       content:
@@ -1347,18 +1766,25 @@ components:
   schemas:
     Error:
       type: object
+      description: |
+        Most errors set `error` to `Error` and put the reason in `message`. Pairing
+        errors only have `error`, holding the reason.
       required:
         - error
-        - message
       properties:
         error:
           type: string
           examples:
             - Error
+            - Pairing request timed out
         message:
           type: string
           examples:
             - "invalid device id: all"
+            - '"name" is required'
+        type:
+          type: string
+          description: Set when the body couldn't be parsed, as `entity.parse.failed`.
 
     Identifier:
       type: object
@@ -1367,6 +1793,17 @@ components:
       properties:
         id:
           type: string
+
+    FirmwareUpdateSchedule:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        time:
+          type: string
+          description: Local time of day as `HH:MM`.
+          examples:
+            - "03:12"
 
     AuthorizationCode:
       type: object
@@ -1907,13 +2344,15 @@ components:
 
     DevicePatchList:
       type: array
-      description: Every known client sends exactly one element.
-      minItems: 1
+      description: |
+        Every known client sends exactly one element. The hub also accepts several
+        elements, and an empty array.
       items:
         $ref: "#/components/schemas/DevicePatch"
 
     DevicePatch:
       type: object
+      description: Unknown top level fields are ignored.
       required:
         - attributes
       properties:
@@ -1921,7 +2360,12 @@ components:
           $ref: "#/components/schemas/DeviceAttributesPatch"
         transitionTime:
           type: integer
-          description: Fade duration in milliseconds, for light level, temperature and color.
+          description: |
+            Fade duration in milliseconds, for light level, temperature and color.
+            Negative values are accepted.
+        period:
+          type: integer
+          description: Validated as a number by the hub, but what it does isn't known. It may be the identify period.
 
     DeviceAttributesPatch:
       type: object
@@ -2123,13 +2567,13 @@ components:
 
     RoomInput:
       type: object
+      description: The hub stores `color` and `icon` as given, without checking that they're known values.
       required:
         - name
-        - color
-        - icon
       properties:
         name:
           type: string
+          minLength: 1
         color:
           $ref: "#/components/schemas/RoomColor"
         icon:
@@ -2179,10 +2623,10 @@ components:
       type: object
       required:
         - name
-        - icon
       properties:
         name:
           type: string
+          minLength: 1
         icon:
           $ref: "#/components/schemas/DeviceSetIcon"
 
@@ -2243,8 +2687,6 @@ components:
       type: object
       required:
         - info
-        - type
-        - actions
       properties:
         info:
           $ref: "#/components/schemas/SceneInfo"
@@ -2267,8 +2709,9 @@ components:
       type: string
       description: |
         Known values: `userScene` (a scene made in the app), `customScene` (an
-        automation, such as a sensor or button trigger), `wakeUpScene` and
-        `playlistScene`.
+        automation, such as a sensor or button trigger), `wakeUpScene`,
+        `windDownScene` and `playlistScene`. The hub rejects any other value when a
+        scene is created.
 
     SceneInfo:
       type: object
