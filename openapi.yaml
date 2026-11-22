@@ -49,20 +49,30 @@ info:
     identifier: MIT
 x-source-repositories:
   0xtosh/denkigera: https://github.com/0xtosh/denkigera
+  0xtosh/helios: https://github.com/0xtosh/helios
   bombsimon/dirigera-rs: https://github.com/bombsimon/dirigera-rs
+  DanielShifman/IKEA-IoT-Interface: https://github.com/DanielShifman/IKEA-IoT-Interface
+  domjancik/dirigera-readaptive: https://github.com/domjancik/dirigera-readaptive
   dvdgeisler/DirigeraClient: https://github.com/dvdgeisler/DirigeraClient
+  elmarbeckmann/hubdeck: https://github.com/elmarbeckmann/hubdeck
+  EryXInc/dirigera-tui: https://github.com/EryXInc/dirigera-tui
   hagronnestad/dirigera: https://github.com/hagronnestad/dirigera
   kaliberjs/ikea-dirigera: https://github.com/kaliberjs/ikea-dirigera
+  lednifrolg/dirigent: https://github.com/lednifrolg/dirigent
   Leggin/dirigera: https://github.com/Leggin/dirigera
   lpgera/dirigera: https://github.com/lpgera/dirigera
+  matteovivona/homebridge-dirigera-ng: https://github.com/matteovivona/homebridge-dirigera-ng
   mattias73andersson/dirigera-client-poc: https://github.com/mattias73andersson/dirigera-client-poc
+  nyanshell/dirigera-ctl: https://github.com/nyanshell/dirigera-ctl
   openhab/openhab-addons: https://github.com/openhab/openhab-addons/tree/main/bundles/org.openhab.binding.dirigera
   phillipp/dirigera: https://github.com/phillipp/dirigera
   rtoma/dirigera-prometheus-exporter: https://github.com/rtoma/dirigera-prometheus-exporter
   salex-org/ikea-dirigera-client: https://github.com/salex-org/ikea-dirigera-client
   sanjoyg/dirigera_platform: https://github.com/sanjoyg/dirigera_platform
+  sheepherder/dirigera-mqtt-bridge: https://github.com/sheepherder/dirigera-mqtt-bridge
   thembo-sec/dirigera_client: https://github.com/thembo-sec/dirigera_client
   uboness/homebridge-dirigera: https://github.com/uboness/homebridge-dirigera
+  wayju/dirigera-monitor: https://github.com/wayju/dirigera-monitor
   wjtje/DIRIGERA: https://github.com/wjtje/DIRIGERA
   zinen/node-dirigera-promise: https://github.com/zinen/node-dirigera-promise
 servers:
@@ -97,6 +107,8 @@ tags:
       Schedules of light level and color temperature over the day. A light follows
       one when its `deviceOnBehavior` points at it. They are listed in
       `GET /home`, there is no separate list route.
+  - name: Activity log
+    description: History of door, window and water leak sensor events.
   - name: Users
   - name: Music
     description: Sonos integration.
@@ -391,6 +403,12 @@ paths:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
+        - 0xtosh/helios
+        - DanielShifman/IKEA-IoT-Interface
+        - hagronnestad/dirigera
+        - nyanshell/dirigera-ctl
+        - salex-org/ikea-dirigera-client
+        - wayju/dirigera-monitor
         - IKEA Home smart app
       responses:
         "200":
@@ -496,7 +514,8 @@ paths:
         Whether the hub is paired with Apple Home. The HomeKit accessory server itself
         listens on port 8000.
       x-verified: true
-      x-sources: []
+      x-sources:
+        - IKEA Home smart app
       responses:
         "200":
           description: HomeKit pairing state.
@@ -509,6 +528,29 @@ paths:
                     type: boolean
                   integrationPairingAllowed:
                     type: boolean
+        default:
+          $ref: "#/components/responses/Error"
+  /hub/matter-bridge:
+    get:
+      tags:
+        - Hub
+      operationId: getMatterBridge
+      summary: Get the Matter bridge
+      description: |
+        Whether the hub's devices are shared with a Matter controller such as Apple
+        Home or Google Home. `integrationPairingPayload` and
+        `integrationManualPairingCode` are the setup QR payload and code, so treat
+        them as secrets. The cloud relay answers `403`.
+      x-verified: true
+      x-sources:
+        - IKEA Home smart app
+      responses:
+        "200":
+          description: Matter bridge state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatterBridgeStatus"
         default:
           $ref: "#/components/responses/Error"
   /hub/ota/schedule:
@@ -561,6 +603,8 @@ paths:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
+        - DanielShifman/IKEA-IoT-Interface
+        - salex-org/ikea-dirigera-client
       responses:
         "202":
           description: Check started. Progress shows up in the hub's `ota*` attributes.
@@ -578,6 +622,7 @@ paths:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
+        - salex-org/ikea-dirigera-client
       responses:
         "202":
           description: Update started.
@@ -752,6 +797,8 @@ paths:
         - kaliberjs/ikea-dirigera
         - 0xtosh/denkigera
         - bombsimon/dirigera-rs
+        - domjancik/dirigera-readaptive
+        - 0xtosh/helios
         - IKEA Home smart app
       requestBody:
         required: true
@@ -839,6 +886,11 @@ paths:
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
         - uboness/homebridge-dirigera
+        - DanielShifman/IKEA-IoT-Interface
+        - lednifrolg/dirigent
+        - matteovivona/homebridge-dirigera-ng
+        - nyanshell/dirigera-ctl
+        - sheepherder/dirigera-mqtt-bridge
         - IKEA Home smart app
       requestBody:
         required: true
@@ -1200,6 +1252,7 @@ paths:
         - lpgera/dirigera
         - dvdgeisler/DirigeraClient
         - thembo-sec/dirigera_client
+        - DanielShifman/IKEA-IoT-Interface
       requestBody:
         required: true
         content:
@@ -1569,6 +1622,12 @@ paths:
         - openhab/openhab-addons
         - sanjoyg/dirigera_platform
         - bombsimon/dirigera-rs
+        - 0xtosh/helios
+        - EryXInc/dirigera-tui
+        - elmarbeckmann/hubdeck
+        - hagronnestad/dirigera
+        - lednifrolg/dirigent
+        - zinen/node-dirigera-promise
         - IKEA Home smart app
       responses:
         "202":
@@ -1594,6 +1653,8 @@ paths:
         - openhab/openhab-addons
         - sanjoyg/dirigera_platform
         - bombsimon/dirigera-rs
+        - hagronnestad/dirigera
+        - lednifrolg/dirigent
         - IKEA Home smart app
       responses:
         "202":
@@ -1661,6 +1722,7 @@ paths:
         `adaptiveProfileCreated` event.
       x-verified: true
       x-sources:
+        - domjancik/dirigera-readaptive
         - IKEA Home smart app
       requestBody:
         required: true
@@ -1710,6 +1772,7 @@ paths:
         An unknown id still gets `202` and nothing is created.
       x-verified: true
       x-sources:
+        - domjancik/dirigera-readaptive
         - IKEA Home smart app
       requestBody:
         required: true
@@ -1734,10 +1797,34 @@ paths:
         keep pointing at it in `deviceOnBehavior`.
       x-verified: true
       x-sources:
+        - domjancik/dirigera-readaptive
         - IKEA Home smart app
       responses:
         "202":
           description: Profile deleted.
+        default:
+          $ref: "#/components/responses/Error"
+
+  /activitylog:
+    get:
+      tags:
+        - Activity log
+      operationId: getActivityLog
+      summary: Get the activity log
+      description: Past open and close events of door and window sensors, and leaks from water sensors.
+      x-verified: true
+      x-sources:
+        - DanielShifman/IKEA-IoT-Interface
+        - IKEA Home smart app
+      responses:
+        "200":
+          description: Logged events.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Activity"
         default:
           $ref: "#/components/responses/Error"
 
@@ -2570,6 +2657,15 @@ components:
           type: string
           description: "Known values: `home`, `away`."
 
+        currentAcFrequency:
+          type: integer
+        relativePosition:
+          type: array
+          description: Where an endpoint sits on a multi-part device.
+          items:
+            type: string
+            description: "Known values include `top` and `bottom`."
+
     DevicePatchList:
       type: array
       description: |
@@ -2606,6 +2702,14 @@ components:
         customIcon:
           type: string
           description: Icon in the app, such as `placement_door`.
+        adaptiveProfile:
+          type: object
+          description: Makes a light follow an adaptive profile right away.
+          properties:
+            id:
+              type: string
+            active:
+              type: boolean
         transitionTime:
           type: integer
           description: |
@@ -2647,6 +2751,10 @@ components:
         deviceOnBehavior:
           $ref: "#/components/schemas/DeviceOnBehavior"
         blindsTargetLevel:
+          type: integer
+          minimum: 0
+          maximum: 100
+        blindsTargetTilt:
           type: integer
           minimum: 0
           maximum: 100
@@ -3097,6 +3205,9 @@ components:
         undo:
           type: boolean
           description: Undo the scene instead of running it when the filter matches.
+        edgeTrigger:
+          type: boolean
+          description: Only on `event` triggers.
         notifications:
           type: array
           description: |
@@ -3294,6 +3405,42 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/MusicPlayItem"
+
+    MatterBridgeStatus:
+      type: object
+      properties:
+        integrationPaired:
+          type: boolean
+        integrationPairingAllowed:
+          type: boolean
+        provisioned:
+          type: boolean
+        integrationPairingPayload:
+          type: string
+          description: Setup QR payload. A secret.
+        integrationManualPairingCode:
+          type: string
+          description: Manual setup code. A secret.
+
+    Activity:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        deviceId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        deviceType:
+          type: string
+        name:
+          type: string
+          description: The kind of event.
+        value:
+          type: boolean
+          description: Open, or leaking.
 
     MusicPlayItem:
       type: object

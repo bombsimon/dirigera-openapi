@@ -14,9 +14,9 @@ implementation.
 > and testing against a real hub, and firmware updates may change it. This
 > project isn't affiliated with IKEA.
 
-- [`openapi.yaml`] describes the REST API with 55 operations over devices,
-  rooms, scenes, device sets, adaptive profiles, users, music, the hub and
-  pairing.
+- [`openapi.yaml`] describes the REST API with 57 operations over devices,
+  rooms, scenes, device sets, adaptive profiles, the activity log, users, music,
+  the hub and pairing.
 - [`asyncapi.yaml`] describes the websocket with ping and pong plus 22 event
   types for changes to devices, scenes, rooms, device sets, adaptive profiles and
   music.
@@ -26,7 +26,7 @@ implementation.
 Every operation has two extensions:
 
 - `x-verified: true` means the operation was called against a real hub
-  (firmware 2.975.4) and the response matched the schema. This covers 48
+  (firmware 2.975.4) and the response matched the schema. This covers 50
   operations: every read, plus device and group control, rooms, device sets,
   scenes, adaptive profiles, remote links, users, pairing and firmware updates.
 - `x-sources` lists the community projects that use the operation, as GitHub
